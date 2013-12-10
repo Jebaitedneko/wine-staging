@@ -1554,6 +1554,23 @@ BOOL CDECL dibdrv_RoundRect( PHYSDEV dev, INT left, INT top, INT right, INT bott
     BOOL ret = TRUE;
     HRGN outline = 0, interior = 0;
 
+    BOOL exclude_rotation_translation = FALSE;
+    XFORM old;
+    XFORM rotation_and_translation;
+
+    if (GetGraphicsMode( pdev->dev.hdc ) == GM_ADVANCED)
+    {
+        XFORM xf;
+        GetWorldTransform( pdev->dev.hdc, &old );
+        xf = old;
+        if (xform_has_rotate_and_uniform_scale_and_shear( &xf ) &&
+            xform_decompose_rotation_and_translation( &xf, &rotation_and_translation ))
+        {
+            SetWorldTransform( pdev->dev.hdc, &xf );
+            exclude_rotation_translation = TRUE;
+        }
+    }
+
     if (!get_pen_device_rect( dc, pdev, &rect, left, top, right, bottom )) return TRUE;
 
     pt[0].x = pt[0].y = 0;
@@ -1572,23 +1589,6 @@ BOOL CDECL dibdrv_RoundRect( PHYSDEV dev, INT left, INT top, INT right, INT bott
     {
         HeapFree( GetProcessHeap(), 0, points );
         return FALSE;
-    }
-
-    if (pdev->brush.style != BS_NULL &&
-        !(interior = CreateRoundRectRgn( rect.left, rect.top, rect.right + 1, rect.bottom + 1,
-                                         ellipse_width, ellipse_height )))
-    {
-        HeapFree( GetProcessHeap(), 0, points );
-        if (outline) DeleteObject( outline );
-        return FALSE;
-    }
-
-    /* if not using a region, paint the interior first so the outline can overlap it */
-    if (interior && !outline)
-    {
-        ret = brush_region( pdev, interior );
-        DeleteObject( interior );
-        interior = 0;
     }
 
     count = ellipse_first_quadrant( ellipse_width, ellipse_height, points );
@@ -1634,13 +1634,37 @@ BOOL CDECL dibdrv_RoundRect( PHYSDEV dev, INT left, INT top, INT right, INT bott
     }
     count = end + 1;
 
+    if (exclude_rotation_translation == TRUE)
+    {
+        SetWorldTransform( pdev->dev.hdc, &rotation_and_translation );
+        /* apply rotation and translation to calculated points */
+        LPtoDP( dev->hdc, points, count );
+        /* restore origin matrix */
+        SetWorldTransform( pdev->dev.hdc, &old );
+    }
+
+    if (pdev->brush.style != BS_NULL &&
+        !(interior = CreatePolygonRgn(points, count, ALTERNATE)))
+    {
+        HeapFree( GetProcessHeap(), 0, points );
+        if (outline) DeleteObject( outline );
+            return FALSE;
+    }
+
+    /* if not using a region, paint the interior first so the outline can overlap it */
+    if (interior && !outline)
+    {
+        ret = brush_region( pdev, interior );
+        DeleteObject( interior );
+        interior = 0;
+    }
+
     reset_dash_origin( pdev );
     pdev->pen_lines( pdev, count, points, TRUE, outline );
     add_pen_lines_bounds( pdev, count, points, outline );
 
     if (interior)
     {
-        CombineRgn( interior, interior, outline, RGN_DIFF );
         ret = brush_region( pdev, interior );
         DeleteObject( interior );
     }
