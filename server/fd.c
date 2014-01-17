@@ -169,7 +169,8 @@ struct closed_fd
     struct list entry;       /* entry in inode closed list */
     int         unix_fd;     /* the unix file descriptor */
     int         unlink;      /* whether to unlink on close: -1 - implicit FILE_DELETE_ON_CLOSE, 1 - explicit disposition */
-    char       *unix_name;   /* name to unlink on close, points to parent fd unix_name */
+    char       *unlink_name; /* name to unlink on close, points to parent fd unix_name */
+    char       *unix_name;   /* name to real file path, points to parent fd unix_name */
 };
 
 struct fd
@@ -184,6 +185,7 @@ struct fd
     unsigned int         access;      /* file access (FILE_READ_DATA etc.) */
     unsigned int         options;     /* file options (FILE_DELETE_ON_CLOSE, FILE_SYNCHRONOUS...) */
     unsigned int         sharing;     /* file sharing mode */
+    char                *unlink_name; /* file name to unlink on close */
     char                *unix_name;   /* unix file name */
     int                  unix_fd;     /* unix file descriptor */
     unsigned int         no_fd_status;/* status to return when unix_fd is -1 */
@@ -1119,6 +1121,7 @@ static void inode_close_pending( struct inode *inode, int keep_unlinks )
         if (!keep_unlinks || !fd->unlink)  /* get rid of it unless there's an unlink pending on that file */
         {
             list_remove( ptr );
+            free( fd->unlink_name );
             free( fd->unix_name );
             free( fd );
         }
@@ -1153,12 +1156,13 @@ static void inode_destroy( struct object *obj )
         {
             /* make sure it is still the same file */
             struct stat st;
-            if (!stat( fd->unix_name, &st ) && st.st_dev == inode->device->dev && st.st_ino == inode->ino)
+            if (!lstat( fd->unlink_name, &st ) && st.st_dev == inode->device->dev && st.st_ino == inode->ino)
             {
-                if (S_ISDIR(st.st_mode)) rmdir( fd->unix_name );
-                else unlink( fd->unix_name );
+                if (S_ISDIR(st.st_mode)) rmdir( fd->unlink_name );
+                else unlink( fd->unlink_name );
             }
         }
+        free( fd->unlink_name );
         free( fd->unix_name );
         free( fd );
     }
@@ -1578,6 +1582,7 @@ static void fd_destroy( struct object *obj )
     else  /* no inode, close it right away */
     {
         if (fd->unix_fd != -1) close( fd->unix_fd );
+        free( fd->unlink_name );
         free( fd->unix_name );
     }
 }
@@ -1687,6 +1692,7 @@ static struct fd *alloc_fd_object(void)
     fd->options    = 0;
     fd->sharing    = 0;
     fd->unix_fd    = -1;
+    fd->unlink_name  = NULL;
     fd->unix_name  = NULL;
     fd->cacheable  = 0;
     fd->signaled   = 1;
@@ -1722,6 +1728,7 @@ struct fd *alloc_pseudo_fd( const struct fd_ops *fd_user_ops, struct object *use
     fd->access     = 0;
     fd->options    = options;
     fd->sharing    = 0;
+    fd->unlink_name  = NULL;
     fd->unix_name  = NULL;
     fd->unix_fd    = -1;
     fd->cacheable  = 0;
@@ -1756,6 +1763,12 @@ struct fd *dup_fd_object( struct fd *orig, unsigned int access, unsigned int sha
         strcpy( fd->unix_name, orig->unix_name );
     }
 
+    if (orig->unlink_name)
+    {
+        if (!(fd->unlink_name = mem_alloc( strlen(orig->unlink_name) + 1 ))) goto failed;
+        strcpy( fd->unlink_name, orig->unlink_name );
+    }
+
     if (orig->inode)
     {
         struct closed_fd *closed = mem_alloc( sizeof(*closed) );
@@ -1768,6 +1781,7 @@ struct fd *dup_fd_object( struct fd *orig, unsigned int access, unsigned int sha
         }
         closed->unix_fd = fd->unix_fd;
         closed->unlink = 0;
+        closed->unlink_name = fd->unlink_name;
         closed->unix_name = fd->unix_name;
         fd->closed = closed;
         fd->inode = (struct inode *)grab_object( orig->inode );
@@ -1909,18 +1923,19 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode, 
     fd->unix_name = NULL;
     if ((path = dup_fd_name( root, name )))
     {
+        fd->unlink_name = path;
         fd->unix_name = realpath( path, NULL );
-        free( path );
     }
 
     closed_fd->unix_fd = fd->unix_fd;
     closed_fd->unlink = 0;
+    closed_fd->unlink_name = fd->unlink_name;
     closed_fd->unix_name = fd->unix_name;
-    fstat( fd->unix_fd, &st );
+    lstat( fd->unlink_name, &st );
     *mode = st.st_mode;
 
     /* only bother with an inode for normal files and directories */
-    if (S_ISREG(st.st_mode) || S_ISDIR(st.st_mode))
+    if (S_ISREG(st.st_mode) || S_ISDIR(st.st_mode) || S_ISLNK(st.st_mode))
     {
         unsigned int err;
         struct inode *inode = get_inode( st.st_dev, st.st_ino, fd->unix_fd );
@@ -1937,6 +1952,9 @@ struct fd *open_fd( struct fd *root, const char *name, int flags, mode_t *mode, 
         fd->cacheable = !inode->device->removable;
         list_add_head( &inode->open, &fd->inode_entry );
         closed_fd = NULL;
+
+        fstat( fd->unix_fd, &st );
+        *mode = st.st_mode;
 
         /* check directory options */
         if ((options & FILE_DIRECTORY_FILE) && !S_ISDIR(st.st_mode))
@@ -2563,10 +2581,11 @@ static void set_fd_name( struct fd *fd, struct fd *root, const char *nameptr,
         fchmod( fd->unix_fd, st.st_mode );
     }
 
+    free( fd->unlink_name );
     free( fd->unix_name );
+    fd->closed->unlink_name = fd->unlink_name = name;
     fd->closed->unix_name = fd->unix_name = realpath( name, NULL );
-    free( name );
-    if (!fd->unix_name)
+    if (!fd->unlink_name || !fd->unix_name)
         set_error( STATUS_NO_MEMORY );
     return;
 
