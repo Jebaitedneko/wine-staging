@@ -2027,6 +2027,8 @@ AC_CHECK_FUNCS(\
 	prctl \
 	proc_pidinfo \
 	sched_yield \
+	renameat \
+	renameat2 \
 	setproctitle \
 	setprogname \
 	sigprocmask \
