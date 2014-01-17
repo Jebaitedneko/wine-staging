@@ -2199,6 +2199,8 @@ AC_CHECK_FUNCS(\
 	proc_pidinfo \
 	pwrite \
 	readlink \
+	renameat \
+	renameat2 \
 	sched_yield \
 	setproctitle \
 	setprogname \
