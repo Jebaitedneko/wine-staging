@@ -5964,17 +5964,34 @@ static void ignore_server_ioctl_struct_holes( ULONG code, const void *in_buffer,
 NTSTATUS create_reparse_point(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
 {
     BOOL src_allocated = FALSE, dest_allocated = FALSE, tempdir_created = FALSE;
-    int dest_len = buffer->MountPointReparseBuffer.SubstituteNameLength;
-    int offset = buffer->MountPointReparseBuffer.SubstituteNameOffset;
-    WCHAR *dest = &buffer->MountPointReparseBuffer.PathBuffer[offset];
     char tmpdir[PATH_MAX], tmplink[PATH_MAX], *d;
     SIZE_T unix_dest_len = PATH_MAX;
     char *unix_src, *unix_dest;
     char magic_dest[PATH_MAX];
     int dest_fd, needs_close;
     UNICODE_STRING nt_dest;
+    int dest_len, offset;
     NTSTATUS status;
+    struct stat st;
+    WCHAR *dest;
     int i;
+
+    switch(buffer->ReparseTag)
+    {
+    case IO_REPARSE_TAG_MOUNT_POINT:
+        dest_len = buffer->MountPointReparseBuffer.SubstituteNameLength;
+        offset = buffer->MountPointReparseBuffer.SubstituteNameOffset;
+        dest = &buffer->MountPointReparseBuffer.PathBuffer[offset];
+        break;
+    case IO_REPARSE_TAG_SYMLINK:
+        dest_len = buffer->SymbolicLinkReparseBuffer.SubstituteNameLength;
+        offset = buffer->SymbolicLinkReparseBuffer.SubstituteNameOffset;
+        dest = &buffer->SymbolicLinkReparseBuffer.PathBuffer[offset];
+        break;
+    default:
+        FIXME("stub: FSCTL_SET_REPARSE_POINT(%x)\n", buffer->ReparseTag);
+        return STATUS_NOT_IMPLEMENTED;
+    }
 
     if ((status = server_get_unix_fd( handle, FILE_SPECIAL_ACCESS, &dest_fd, &needs_close, NULL, NULL )))
         return status;
@@ -6007,6 +6024,20 @@ NTSTATUS create_reparse_point(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
     for (i = 0; i < sizeof(ULONG)*8; i++)
     {
         if ((buffer->ReparseTag >> i) & 1)
+            strcat( magic_dest, "." );
+        strcat( magic_dest, "/" );
+    }
+    /* Encode the type (file or directory) if NT symlink */
+    if (buffer->ReparseTag == IO_REPARSE_TAG_SYMLINK)
+    {
+        BOOL is_dir;
+        if (fstat( dest_fd, &st ) == -1)
+        {
+            status = errno_to_status( errno );
+            goto cleanup;
+        }
+        is_dir = S_ISDIR(st.st_mode);
+        if (is_dir)
             strcat( magic_dest, "." );
         strcat( magic_dest, "/" );
     }
@@ -6378,17 +6409,7 @@ NTSTATUS WINAPI NtFsControlFile( HANDLE handle, HANDLE event, PIO_APC_ROUTINE ap
     case FSCTL_SET_REPARSE_POINT:
     {
         REPARSE_DATA_BUFFER *buffer = (REPARSE_DATA_BUFFER *)in_buffer;
-
-        switch(buffer->ReparseTag)
-        {
-        case IO_REPARSE_TAG_MOUNT_POINT:
-            status = create_reparse_point( handle, buffer );
-            break;
-        default:
-            FIXME("stub: FSCTL_SET_REPARSE_POINT(%x)\n", buffer->ReparseTag);
-            status = STATUS_NOT_IMPLEMENTED;
-            break;
-        }
+        status = create_reparse_point( handle, buffer );
         break;
     }
 
