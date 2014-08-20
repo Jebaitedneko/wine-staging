@@ -108,6 +108,9 @@
 #ifdef HAVE_SYS_STATFS_H
 #include <sys/statfs.h>
 #endif
+#ifdef HAVE_ATTR_XATTR_H
+#include <attr/xattr.h>
+#endif
 #include <time.h>
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
@@ -370,6 +373,20 @@ NTSTATUS errno_to_status( int err )
         FIXME( "Converting errno %d to STATUS_UNSUCCESSFUL\n", err );
         return STATUS_UNSUCCESSFUL;
     }
+}
+
+#ifndef XATTR_USER_PREFIX
+#define XATTR_USER_PREFIX "user."
+#endif
+
+static int xattr_get( const char *path, const char *name, void *value, size_t size )
+{
+#if defined(HAVE_ATTR_XATTR_H)
+    return getxattr( path, name, value, size );
+#else
+    errno = ENOSYS;
+    return -1;
+#endif
 }
 
 /* get space from the current directory data buffer, allocating a new one if necessary */
@@ -1457,6 +1474,22 @@ static BOOL append_entry( struct dir_data *data, const char *long_name,
 }
 
 
+/* Match the Samba conventions for storing DOS file attributes */
+#define SAMBA_XATTR_DOS_ATTRIB XATTR_USER_PREFIX "DOSATTRIB"
+/* We are only interested in some attributes, the others have corresponding Unix attributes */
+#define XATTR_ATTRIBS_MASK     (FILE_ATTRIBUTE_HIDDEN|FILE_ATTRIBUTE_SYSTEM)
+
+/* decode the xattr-stored DOS attributes */
+static inline int get_file_xattr( char *hexattr, int attrlen )
+{
+    if (attrlen > 2 && hexattr[0] == '0' && hexattr[1] == 'x')
+    {
+        hexattr[attrlen] = 0;
+        return strtol( hexattr+2, NULL, 16 ) & XATTR_ATTRIBS_MASK;
+    }
+    return 0;
+}
+
 /* fetch the attributes of a file */
 static inline ULONG get_file_attributes( const struct stat *st )
 {
@@ -1500,7 +1533,8 @@ static int fd_get_file_info( int fd, unsigned int options, struct stat *st, ULON
 static int get_file_info( const char *path, struct stat *st, ULONG *attr )
 {
     char *parent_path;
-    int ret;
+    char hexattr[11];
+    int len, ret;
 
     *attr = 0;
     ret = lstat( path, st );
@@ -1526,6 +1560,9 @@ static int get_file_info( const char *path, struct stat *st, ULONG *attr )
         free( parent_path );
     }
     *attr |= get_file_attributes( st );
+    len = xattr_get( path, SAMBA_XATTR_DOS_ATTRIB, hexattr, sizeof(hexattr)-1 );
+    if (len == -1) return ret;
+    *attr |= get_file_xattr( hexattr, len );
     return ret;
 }
 
