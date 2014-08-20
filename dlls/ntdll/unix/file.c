@@ -392,6 +392,26 @@ static int xattr_get( const char *path, const char *name, void *value, size_t si
 #endif
 }
 
+static int xattr_remove( const char *path, const char *name )
+{
+#if defined(HAVE_ATTR_XATTR_H)
+    return removexattr( path, name );
+#else
+    errno = ENOSYS;
+    return -1;
+#endif
+}
+
+static int xattr_set( const char *path, const char *name, void *value, size_t size )
+{
+#if defined(HAVE_ATTR_XATTR_H)
+    return setxattr( path, name, value, size, 0 );
+#else
+    errno = ENOSYS;
+    return -1;
+#endif
+}
+
 /* get space from the current directory data buffer, allocating a new one if necessary */
 static void *get_dir_data_space( struct dir_data *data, unsigned int size )
 {
@@ -3786,6 +3806,20 @@ static NTSTATUS unmount_device( HANDLE handle )
     return status;
 }
 
+NTSTATUS set_file_info( const char *path, ULONG attr )
+{
+    char hexattr[11];
+    int len;
+
+    /* Note: unix mode already set when called this way */
+    attr &= ~FILE_ATTRIBUTE_NORMAL; /* do not store everything, but keep everything Samba can use */
+    len = sprintf( hexattr, "0x%x", attr );
+    if (attr != 0)
+        xattr_set( path, SAMBA_XATTR_DOS_ATTRIB, hexattr, len );
+    else
+        xattr_remove( path, SAMBA_XATTR_DOS_ATTRIB );
+    return STATUS_SUCCESS;
+}
 
 /******************************************************************************
  *              open_unix_file
@@ -3871,13 +3905,14 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
         status = STATUS_SUCCESS;
     }
 
-    if (status == STATUS_SUCCESS)
+    if (status != STATUS_SUCCESS)
     {
-        status = open_unix_file( handle, unix_name, access, &new_attr, attributes,
-                                 sharing, disposition, options, ea_buffer, ea_length );
-        free( unix_name );
+        WARN( "%s not found (%x)\n", debugstr_us(attr->ObjectName), io->u.Status );
+        return status;
     }
-    else WARN( "%s not found (%x)\n", debugstr_us(attr->ObjectName), status );
+
+    status = open_unix_file( handle, unix_name, access, &new_attr, attributes,
+                                   sharing, disposition, options, ea_buffer, ea_length );
 
     if (status == STATUS_SUCCESS)
     {
@@ -3899,6 +3934,11 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
             io->Information = FILE_OVERWRITTEN;
             break;
         }
+        if (io->Information == FILE_CREATED)
+        {
+            /* set any DOS extended attributes */
+            set_file_info( unix_name, attributes );
+        }
     }
     else if (status == STATUS_TOO_MANY_OPENED_FILES)
     {
@@ -3907,6 +3947,7 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
     }
 
     free( nt_name.Buffer );
+    free( unix_name );
     return io->u.Status = status;
 }
 
