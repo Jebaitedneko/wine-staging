@@ -1322,6 +1322,9 @@
 /* Define to the soname of the libOSMesa library. */
 #undef SONAME_LIBOSMESA
 
+/* Define to the soname of the libpcap library. */
+#undef SONAME_LIBPCAP
+
 /* Define to the soname of the libpng library. */
 #undef SONAME_LIBPNG
 
