@@ -242,6 +242,7 @@ extern void CDECL X11DRV_WindowPosChanged( HWND hwnd, HWND insert_after, UINT sw
                                            struct window_surface *surface ) DECLSPEC_HIDDEN;
 extern BOOL CDECL X11DRV_SystemParametersInfo( UINT action, UINT int_param, void *ptr_param,
                                                UINT flags ) DECLSPEC_HIDDEN;
+extern void CDECL X11DRV_UpdateCandidatePos( HWND hwnd, const RECT *caret_rect ) DECLSPEC_HIDDEN;
 extern void CDECL X11DRV_ThreadDetach(void) DECLSPEC_HIDDEN;
 
 /* X11 driver internal functions */

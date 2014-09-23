@@ -415,6 +415,7 @@ static const struct user_driver_funcs x11drv_funcs =
     .pSystemParametersInfo = X11DRV_SystemParametersInfo,
     .pwine_get_vulkan_driver = X11DRV_wine_get_vulkan_driver,
     .pwine_get_wgl_driver = X11DRV_wine_get_wgl_driver,
+    .pUpdateCandidatePos = X11DRV_UpdateCandidatePos,
     .pThreadDetach = X11DRV_ThreadDetach,
 };
 

@@ -113,6 +113,11 @@ static void CDECL loaderdrv_UpdateClipboard(void)
     load_driver()->pUpdateClipboard();
 }
 
+static void CDECL loaderdrv_UpdateCandidatePos( HWND hwnd, const RECT *caret_rect )
+{
+    load_driver()->pUpdateCandidatePos( hwnd, caret_rect );
+}
+
 static struct user_driver_funcs lazy_load_driver =
 {
     { NULL },
@@ -167,6 +172,8 @@ static struct user_driver_funcs lazy_load_driver =
     NULL,
     /* opengl support */
     NULL,
+    /* candidate pos functions */
+    loaderdrv_UpdateCandidatePos,
     /* thread management */
     NULL,
 };
