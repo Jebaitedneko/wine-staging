@@ -106,6 +106,14 @@ WINE_DEFAULT_DEBUG_CHANNEL(menubuilder);
 #define IS_OPTION_TRUE(ch) \
     ((ch) == 'y' || (ch) == 'Y' || (ch) == 't' || (ch) == 'T' || (ch) == '1')
 
+/* On linux we create all menu item entries with an absolute path to wine,
+ * in order to allow using multiple wine versions at the same time. */
+#ifdef __linux__
+    static const char wine_path[] = BINDIR "/wine";
+#else
+    static const char wine_path[] = "wine";
+#endif
+
 /* link file formats */
 
 #include "pshpack1.h"
@@ -1466,11 +1474,12 @@ static BOOL write_desktop_entry(const char *unix_link, const char *location, con
     fprintf(file, "[Desktop Entry]\n");
     fprintf(file, "Name=%s\n", linkname);
     if (prefix)
-        fprintf(file, "Exec=env WINEPREFIX=\"%s\" wine %s %s\n", prefix, path, args);
+        fprintf(file, "Exec=env WINEPREFIX=\"%s\" %s %s %s\n", prefix, wine_path, path, args);
     else if (home)
-        fprintf(file, "Exec=env WINEPREFIX=\"%s/.wine\" wine %s %s\n", home, path, args);
+        fprintf(file, "Exec=env WINEPREFIX=\"%s/.wine\" %s %s %s\n", home, wine_path, path, args);
     else
-        fprintf(file, "Exec=wine %s %s\n", path, args);
+        fprintf(file, "Exec=%s %s %s\n", wine_path, path, args);
+
     fprintf(file, "Type=Application\n");
     fprintf(file, "StartupNotify=true\n");
     if (descr && *descr)
@@ -2513,11 +2522,11 @@ static BOOL write_freedesktop_association_entry(const char *desktopPath, const c
         fprintf(desktop, "Name=%s\n", friendlyAppName);
         fprintf(desktop, "MimeType=%s;\n", mimeType);
         if (prefix)
-            fprintf(desktop, "Exec=env WINEPREFIX=\"%s\" wine start /ProgIDOpen %s %%f\n", prefix, progId);
+            fprintf(desktop, "Exec=env WINEPREFIX=\"%s\" %s start /ProgIDOpen %s %%f\n", prefix, wine_path, progId);
         else if (home)
-            fprintf(desktop, "Exec=env WINEPREFIX=\"%s/.wine\" wine start /ProgIDOpen %s %%f\n", home, progId);
+            fprintf(desktop, "Exec=env WINEPREFIX=\"%s/.wine\" %s start /ProgIDOpen %s %%f\n", home, wine_path, progId);
         else
-            fprintf(desktop, "Exec=wine start /ProgIDOpen %s %%f\n", progId);
+            fprintf(desktop, "Exec=%s start /ProgIDOpen %s %%f\n", wine_path, progId);
         fprintf(desktop, "NoDisplay=true\n");
         fprintf(desktop, "StartupNotify=true\n");
         if (openWithIcon)
