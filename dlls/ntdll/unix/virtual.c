@@ -2934,7 +2934,7 @@ NTSTATUS virtual_handle_fault( void *addr, DWORD err, void *stack )
 
     mutex_lock( &virtual_mutex );  /* no need for signal masking inside signal handler */
     vprot = get_page_vprot( page );
-    if (!is_inside_signal_stack( stack ) && (vprot & VPROT_GUARD))
+    if (stack && !is_inside_signal_stack( stack ) && (vprot & VPROT_GUARD))
     {
         if (page < (char *)NtCurrentTeb()->DeallocationStack ||
             page >= (char *)NtCurrentTeb()->Tib.StackBase)
