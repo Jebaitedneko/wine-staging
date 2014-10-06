@@ -7928,6 +7928,35 @@ fi
 
 done
 
+    for ac_header in sys/xattr.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "sys/xattr.h" "ac_cv_header_sys_xattr_h" "$ac_includes_default"
+if test "x$ac_cv_header_sys_xattr_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_SYS_XATTR_H 1
+_ACEOF
+ HAVE_XATTR=1
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <sys/xattr.h>
+int
+main ()
+{
+getxattr("", "", "", 0, 0, 0);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+
+$as_echo "#define XATTR_ADDITIONAL_OPTIONS 1" >>confdefs.h
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+
+done
+
 fi
 if test "x$with_xattr" = "xyes"
 then
