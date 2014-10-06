@@ -114,6 +114,10 @@
 #elif defined(HAVE_SYS_XATTR_H)
 #include <sys/xattr.h>
 #endif
+#ifdef HAVE_SYS_EXTATTR_H
+#undef XATTR_ADDITIONAL_OPTIONS
+#include <sys/extattr.h>
+#endif
 #include <time.h>
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
@@ -381,6 +385,21 @@ NTSTATUS errno_to_status( int err )
 #ifndef XATTR_USER_PREFIX
 #define XATTR_USER_PREFIX "user."
 #endif
+#ifndef XATTR_USER_PREFIX_LEN
+#define XATTR_USER_PREFIX_LEN (sizeof(XATTR_USER_PREFIX) - 1)
+#endif
+
+#ifdef HAVE_SYS_EXTATTR_H
+static inline int xattr_valid_namespace( const char *name )
+{
+    if (strncmp( XATTR_USER_PREFIX, name, XATTR_USER_PREFIX_LEN ) != 0)
+    {
+        errno = EPERM;
+        return 0;
+    }
+    return 1;
+}
+#endif
 
 static int xattr_fremove( int filedes, const char *name )
 {
@@ -388,6 +407,9 @@ static int xattr_fremove( int filedes, const char *name )
     return fremovexattr( filedes, name, 0 );
 #elif defined(HAVE_SYS_XATTR_H) || defined(HAVE_ATTR_XATTR_H)
     return fremovexattr( filedes, name );
+#elif defined(HAVE_SYS_EXTATTR_H)
+    if (!xattr_valid_namespace( name )) return -1;
+    return extattr_delete_fd( filedes, EXTATTR_NAMESPACE_USER, &name[XATTR_USER_PREFIX_LEN] );
 #else
     errno = ENOSYS;
     return -1;
@@ -400,6 +422,10 @@ static int xattr_fset( int filedes, const char *name, void *value, size_t size )
     return fsetxattr( filedes, name, value, size, 0, 0 );
 #elif defined(HAVE_SYS_XATTR_H) || defined(HAVE_ATTR_XATTR_H)
     return fsetxattr( filedes, name, value, size, 0 );
+#elif defined(HAVE_SYS_EXTATTR_H)
+    if (!xattr_valid_namespace( name )) return -1;
+    return extattr_set_fd( filedes, EXTATTR_NAMESPACE_USER, &name[XATTR_USER_PREFIX_LEN],
+                           value, size );
 #else
     errno = ENOSYS;
     return -1;
@@ -412,6 +438,10 @@ static int xattr_get( const char *path, const char *name, void *value, size_t si
     return getxattr( path, name, value, size, 0, 0 );
 #elif defined(HAVE_SYS_XATTR_H) || defined(HAVE_ATTR_XATTR_H)
     return getxattr( path, name, value, size );
+#elif defined(HAVE_SYS_EXTATTR_H)
+    if (!xattr_valid_namespace( name )) return -1;
+    return extattr_get_file( path, EXTATTR_NAMESPACE_USER, &name[XATTR_USER_PREFIX_LEN],
+                             value, size );
 #else
     errno = ENOSYS;
     return -1;
@@ -424,6 +454,9 @@ static int xattr_remove( const char *path, const char *name )
     return removexattr( path, name, 0 );
 #elif defined(HAVE_SYS_XATTR_H) || defined(HAVE_ATTR_XATTR_H)
     return removexattr( path, name );
+#elif defined(HAVE_SYS_EXTATTR_H)
+    if (!xattr_valid_namespace( name )) return -1;
+    return extattr_delete_file( path, EXTATTR_NAMESPACE_USER, &name[XATTR_USER_PREFIX_LEN] );
 #else
     errno = ENOSYS;
     return -1;
@@ -436,6 +469,10 @@ static int xattr_set( const char *path, const char *name, void *value, size_t si
     return setxattr( path, name, value, size, 0, 0 );
 #elif defined(HAVE_SYS_XATTR_H) || defined(HAVE_ATTR_XATTR_H)
     return setxattr( path, name, value, size, 0 );
+#elif defined(HAVE_SYS_EXTATTR_H)
+    if (!xattr_valid_namespace( name )) return -1;
+    return extattr_set_file( path, EXTATTR_NAMESPACE_USER, &name[XATTR_USER_PREFIX_LEN],
+                             value, size );
 #else
     errno = ENOSYS;
     return -1;
