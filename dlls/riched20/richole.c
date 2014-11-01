@@ -3706,7 +3706,9 @@ static HRESULT WINAPI TextPara_SetStyle(ITextPara *iface, LONG value)
 static HRESULT WINAPI TextPara_GetAlignment(ITextPara *iface, LONG *value)
 {
     ITextParaImpl *This = impl_from_ITextPara(iface);
-    FIXME("(%p)->(%p)\n", This, value);
+    static int once;
+
+    if (!once++) FIXME("(%p)->(%p)\n", This, value);
 
     if (!para_get_reole(This))
         return CO_E_RELEASED;
