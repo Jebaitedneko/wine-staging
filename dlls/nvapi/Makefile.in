@@ -1,0 +1,6 @@
+MODULE    = nvapi.dll
+
+EXTRADLLFLAGS = -mno-cygwin
+
+C_SRCS = \
+	nvapi.c
