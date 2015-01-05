@@ -1,0 +1,7 @@
+MODULE    = nvapi64.dll
+PARENTSRC = ../nvapi
+
+EXTRADLLFLAGS = -mno-cygwin
+
+C_SRCS = \
+	nvapi.c

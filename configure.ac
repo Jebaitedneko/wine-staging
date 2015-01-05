@@ -207,6 +207,12 @@ enable_win16=${enable_win16:-no}
 enable_win64=${enable_win64:-no}
 enable_wow64=${enable_wow64:-no}
 enable_wow64win=${enable_wow64win:-no}
+if test "x$enable_win64" != "xyes"
+then
+  enable_win32="yes"
+else
+  enable_win32="no"
+fi
 enable_wow64cpu=${enable_wow64cpu:-no}
 
 dnl Disable winetest too if tests are disabled
@@ -2881,6 +2887,9 @@ WINE_CONFIG_MAKEFILE(dlls/ntoskrnl.exe)
 WINE_CONFIG_MAKEFILE(dlls/ntoskrnl.exe/tests)
 WINE_CONFIG_MAKEFILE(dlls/ntprint)
 WINE_CONFIG_MAKEFILE(dlls/ntprint/tests)
+WINE_CONFIG_MAKEFILE(dlls/nvapi,enable_win32)
+WINE_CONFIG_MAKEFILE(dlls/nvapi/tests)
+WINE_CONFIG_MAKEFILE(dlls/nvapi64,enable_win64)
 WINE_CONFIG_MAKEFILE(dlls/nvcuda)
 WINE_CONFIG_MAKEFILE(dlls/nvcuda/tests)
 WINE_CONFIG_MAKEFILE(dlls/objsel)
