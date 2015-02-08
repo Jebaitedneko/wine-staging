@@ -20926,6 +20926,8 @@ wine_fn_config_makefile dlls/nvapi64 enable_win64
 wine_fn_config_makefile dlls/nvcuda enable_nvcuda
 wine_fn_config_makefile dlls/nvcuda/tests enable_tests
 wine_fn_config_makefile dlls/nvcuvid enable_nvcuvid
+wine_fn_config_makefile dlls/nvencodeapi enable_win32
+wine_fn_config_makefile dlls/nvencodeapi64 enable_win64
 wine_fn_config_makefile dlls/objsel enable_objsel
 wine_fn_config_makefile dlls/odbc32 enable_odbc32
 wine_fn_config_makefile dlls/odbcbcp enable_odbcbcp
