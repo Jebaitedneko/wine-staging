@@ -564,6 +564,7 @@ SOURCES = \
 	ntuser.h \
 	nvapi.h \
 	nvcuvid.h \
+	nvencodeapi.h \
 	oaidl.idl \
 	objbase.h \
 	objectarray.idl \
