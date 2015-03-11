@@ -1336,9 +1336,9 @@ static void set_input_key_state( unsigned char *keystate, unsigned char key, int
     else keystate[key] &= ~0x80;
 }
 
-/* update the input key state for a keyboard message */
-static void update_input_key_state( struct desktop *desktop, unsigned char *keystate,
-                                    unsigned int msg, lparam_t wparam )
+/* update the key state for a keyboard message */
+static void update_key_state( struct desktop *desktop, unsigned char *keystate,
+                              unsigned int msg, lparam_t wparam )
 {
     unsigned char key;
     int down = 0;
@@ -1407,21 +1407,27 @@ static void update_desktop_mouse_state( struct desktop *desktop, unsigned int fl
     if (flags & MOUSEEVENTF_MOVE)
         update_desktop_cursor_pos( desktop, x, y );
     if (flags & MOUSEEVENTF_LEFTDOWN)
-        update_input_key_state( desktop, desktop->keystate, WM_LBUTTONDOWN, wparam );
+        update_key_state( desktop, desktop->keystate, WM_LBUTTONDOWN, wparam );
     if (flags & MOUSEEVENTF_LEFTUP)
-        update_input_key_state( desktop, desktop->keystate, WM_LBUTTONUP, wparam );
+        update_key_state( desktop, desktop->keystate, WM_LBUTTONUP, wparam );
     if (flags & MOUSEEVENTF_RIGHTDOWN)
-        update_input_key_state( desktop, desktop->keystate, WM_RBUTTONDOWN, wparam );
+        update_key_state( desktop, desktop->keystate, WM_RBUTTONDOWN, wparam );
     if (flags & MOUSEEVENTF_RIGHTUP)
-        update_input_key_state( desktop, desktop->keystate, WM_RBUTTONUP, wparam );
+        update_key_state( desktop, desktop->keystate, WM_RBUTTONUP, wparam );
     if (flags & MOUSEEVENTF_MIDDLEDOWN)
-        update_input_key_state( desktop, desktop->keystate, WM_MBUTTONDOWN, wparam );
+        update_key_state( desktop, desktop->keystate, WM_MBUTTONDOWN, wparam );
     if (flags & MOUSEEVENTF_MIDDLEUP)
-        update_input_key_state( desktop, desktop->keystate, WM_MBUTTONUP, wparam );
+        update_key_state( desktop, desktop->keystate, WM_MBUTTONUP, wparam );
     if (flags & MOUSEEVENTF_XDOWN)
-        update_input_key_state( desktop, desktop->keystate, WM_XBUTTONDOWN, wparam );
+        update_key_state( desktop, desktop->keystate, WM_XBUTTONDOWN, wparam );
     if (flags & MOUSEEVENTF_XUP)
-        update_input_key_state( desktop, desktop->keystate, WM_XBUTTONUP, wparam );
+        update_key_state( desktop, desktop->keystate, WM_XBUTTONUP, wparam );
+}
+
+/* update the thread input key state for a keyboard message */
+static void update_input_key_state( struct thread_input *input, unsigned int msg, lparam_t wparam )
+{
+    update_key_state( input->desktop, input->keystate, msg, wparam );
 }
 
 /* release the hardware message currently being processed by the given thread */
@@ -1449,7 +1455,7 @@ static void release_hardware_message( struct msg_queue *queue, unsigned int hw_i
     }
     if (clr_bit) clear_queue_bits( queue, clr_bit );
 
-    update_input_key_state( input->desktop, input->keystate, msg->msg, msg->wparam );
+    update_input_key_state( input, msg->msg, msg->wparam );
     list_remove( &msg->entry );
     free_message( msg );
 }
@@ -1579,7 +1585,7 @@ static void queue_hardware_message( struct desktop *desktop, struct message *msg
     struct hardware_msg_data *msg_data = msg->data;
     unsigned int msg_code;
 
-    update_input_key_state( desktop, desktop->keystate, msg->msg, msg->wparam );
+    update_key_state( desktop, desktop->keystate, msg->msg, msg->wparam );
     last_input_time = get_tick_count();
     if (msg->msg != WM_MOUSEMOVE) always_queue = 1;
 
@@ -1618,7 +1624,7 @@ static void queue_hardware_message( struct desktop *desktop, struct message *msg
     win = find_hardware_message_window( desktop, input, msg, &msg_code, &thread );
     if (!win || !thread)
     {
-        if (input) update_input_key_state( input->desktop, input->keystate, msg->msg, msg->wparam );
+        if (input) update_input_key_state( input, msg->msg, msg->wparam );
         free_message( msg );
         return;
     }
@@ -1956,7 +1962,7 @@ static int queue_keyboard_message( struct desktop *desktop, user_handle_t win, c
 
     if ((device = current->process->rawinput_kbd) && (device->flags & RIDEV_NOLEGACY))
     {
-        update_input_key_state( desktop, desktop->keystate, message_code, vkey );
+        update_key_state( desktop, desktop->keystate, message_code, vkey );
         return 0;
     }
 
@@ -2085,7 +2091,7 @@ static int get_hardware_message( struct thread *thread, unsigned int hw_id, user
         if (!win || !win_thread)
         {
             /* no window at all, remove it */
-            update_input_key_state( input->desktop, input->keystate, msg->msg, msg->wparam );
+            update_input_key_state( input, msg->msg, msg->wparam );
             list_remove( &msg->entry );
             free_message( msg );
             continue;
@@ -2101,7 +2107,7 @@ static int get_hardware_message( struct thread *thread, unsigned int hw_id, user
             else
             {
                 /* for another thread input, drop it */
-                update_input_key_state( input->desktop, input->keystate, msg->msg, msg->wparam );
+                update_input_key_state( input, msg->msg, msg->wparam );
                 list_remove( &msg->entry );
                 free_message( msg );
             }
