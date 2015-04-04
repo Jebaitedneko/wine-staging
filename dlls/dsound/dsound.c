@@ -182,6 +182,8 @@ static HRESULT DirectSoundDevice_Create(DirectSoundDevice ** ppDevice)
 
     InitializeSRWLock(&device->buffer_list_lock);
 
+    init_eax_device(device);
+
    *ppDevice = device;
 
     return DS_OK;
