@@ -77,6 +77,7 @@
 #include <shlwapi.h>
 #include <shellapi.h>
 #include <setupapi.h>
+#include <ntsecapi.h>
 #include <newdev.h>
 #include "resource.h"
 
@@ -644,6 +645,36 @@ static void create_bios_key( HKEY system_key )
 done:
     HeapFree( GetProcessHeap(), 0, buf );
     RegCloseKey( bios_key );
+}
+
+/* set a serial number for the disk containing windows */
+static void create_disk_serial_number(void)
+{
+    static const  WCHAR filename[] = {'\\','.','w','i','n','d','o','w','s','-','s','e','r','i','a','l',0};
+    DWORD serial, written;
+    WCHAR path[MAX_PATH];
+    char buffer[16];
+    HANDLE file;
+
+    if (GetSystemDirectoryW( path, sizeof(path)/sizeof(path[0]) ) && path[1] == ':')
+    {
+        path[2] = 0;
+        lstrcatW( path, filename );
+        if (!PathFileExistsW( path ) && RtlGenRandom( &serial, sizeof(serial) ))
+        {
+            WINE_TRACE( "Putting serial number of %08X into file %s\n", serial, wine_dbgstr_w(path) );
+            file = CreateFileW( path, GENERIC_WRITE, FILE_SHARE_READ, NULL,
+                                CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL );
+            if (file == INVALID_HANDLE_VALUE)
+                WINE_ERR( "wine: failed to create %s.\n", wine_dbgstr_w(path) );
+            else
+            {
+                sprintf( buffer, "%X\n", serial );
+                WriteFile( file, buffer, strlen(buffer), &written, NULL );
+                CloseHandle( file );
+            }
+        }
+    }
 }
 
 /* create the volatile hardware registry keys */
@@ -1692,6 +1723,7 @@ int __cdecl main( int argc, char *argv[] )
     ResetEvent( event );  /* in case this is a restart */
 
     create_user_shared_data();
+    create_disk_serial_number();
     create_hardware_registry_keys();
     create_dynamic_registry_keys();
     create_environment_registry_keys();
