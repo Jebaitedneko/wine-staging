@@ -1479,7 +1479,6 @@ static void test_newmenu(void)
     HRESULT hr;
 
     hr = CoCreateInstance(&CLSID_NewMenu, NULL, CLSCTX_INPROC_SERVER, &IID_IUnknown, (void **)&unk);
-    todo_wine
     ok(hr == S_OK, "Failed to create NewMenu object, hr %#lx.\n", hr);
     if (hr != S_OK)
     {
@@ -1489,6 +1488,14 @@ static void test_newmenu(void)
 
     hr = IUnknown_QueryInterface(unk, &IID_IShellExtInit, (void **)&unk2);
     ok(hr == S_OK, "Failed to get IShellExtInit, hr %#lx.\n", hr);
+    IUnknown_Release(unk2);
+
+    hr = IUnknown_QueryInterface(unk, &IID_IContextMenu, (void **)&unk2);
+    ok(hr == S_OK, "Failed to get IContextMenu, hr %#lx.\n", hr);
+    IUnknown_Release(unk2);
+
+    hr = IUnknown_QueryInterface(unk, &IID_IContextMenu2, (void **)&unk2);
+    ok(hr == S_OK, "Failed to get IContextMenu2, hr %#lx.\n", hr);
     IUnknown_Release(unk2);
 
     hr = IUnknown_QueryInterface(unk, &IID_IContextMenu3, (void **)&unk2);
