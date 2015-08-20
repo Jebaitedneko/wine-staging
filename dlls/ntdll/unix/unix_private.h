@@ -55,6 +55,7 @@ struct ntdll_thread_data
     int                reply_fd;      /* fd for receiving server replies */
     int                wait_fd[2];    /* fd for sleeping server requests */
     pthread_t          pthread_id;    /* pthread thread id */
+    void              *pthread_stack; /* pthread stack */
     struct list        entry;         /* entry in TEB list */
     PRTL_THREAD_START_ROUTINE start;  /* thread entry point */
     void              *param;         /* thread entry point parameter */
