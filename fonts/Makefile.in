@@ -12,4 +12,5 @@ FONT_SRCS = \
 	tahoma.sfd \
 	tahomabd.sfd \
 	webdings.sfd \
+	times.sfd \
 	wingding.sfd
