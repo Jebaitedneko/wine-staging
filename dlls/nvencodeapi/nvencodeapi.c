@@ -323,7 +323,23 @@ NVENCSTATUS WINAPI NvEncodeAPICreateInstance(NV_ENCODE_API_FUNCTION_LIST *functi
 
 static BOOL load_nvencode(void)
 {
-    libnvidia_encode_handle = dlopen("libnvidia-encode.so", RTLD_NOW);
+    static const char *libname[] =
+    {
+        "libnvidia-encode.so",
+        #ifdef __i386__
+        "/usr/lib/i386-linux-gnu/nvidia/current/libnvidia-encode.so",
+        #elif defined __x86_64__
+        "/usr/lib/x86_64-linux-gnu/nvidia/current/libnvidia-encode.so",
+        #endif
+    };
+    int i;
+
+    for (i = 0; i < sizeof(libname)/sizeof(libname[0]); i++)
+    {
+        libnvidia_encode_handle = dlopen(libname[i], RTLD_NOW);
+        if (libnvidia_encode_handle) break;
+    }
+
     if (!libnvidia_encode_handle)
     {
         FIXME("Wine cannot find the libnvidia-encode.so library, NVIDIA video encoding support disabled.\n");
