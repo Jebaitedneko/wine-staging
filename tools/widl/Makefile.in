@@ -15,7 +15,8 @@ C_SRCS = \
 	utils.c \
 	widl.c \
 	wpp.c \
-	write_msft.c
+	write_msft.c \
+	write_sltg.c
 
 LEX_SRCS = \
 	parser.l \

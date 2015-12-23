@@ -159,6 +159,7 @@ enum {
     DLLDATA_ONLY_OPTION,
     LOCAL_STUBS_OPTION,
     NOSTDINC_OPTION,
+    OLD_TYPELIB_OPTION,
     PREFIX_ALL_OPTION,
     PREFIX_CLIENT_OPTION,
     PREFIX_SERVER_OPTION,
@@ -185,6 +186,7 @@ static const struct long_option long_options[] = {
     { "nostdinc", 0, NOSTDINC_OPTION },
     { "ns_prefix", 0, RT_NS_PREFIX },
     { "oldnames", 0, OLDNAMES_OPTION },
+    { "oldtlb", 0, NULL, OLD_TYPELIB_OPTION },
     { "output", 0, 'o' },
     { "prefix-all", 1, PREFIX_ALL_OPTION },
     { "prefix-client", 1, PREFIX_CLIENT_OPTION },
@@ -644,6 +646,10 @@ static void option_callback( int optc, char *optarg )
     case 't':
       do_everything = 0;
       do_typelib = 1;
+      break;
+    case OLD_TYPELIB_OPTION:
+      do_everything = 0;
+      do_typelib = 2;
       break;
     case 'T':
       typelib_name = xstrdup(optarg);
