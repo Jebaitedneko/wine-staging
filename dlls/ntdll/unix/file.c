@@ -1683,12 +1683,15 @@ static int get_file_info( const char *path, struct stat *st, ULONG *attr )
         free( parent_path );
     }
     *attr |= get_file_attributes( st );
-    /* convert Unix-style hidden files to a DOS hidden file attribute */
-    if (is_hidden_file( path ))
-        *attr |= FILE_ATTRIBUTE_HIDDEN;
     /* retrieve any stored DOS attributes */
     len = xattr_get( path, SAMBA_XATTR_DOS_ATTRIB, hexattr, sizeof(hexattr)-1 );
-    if (len == -1) return ret;
+    if (len == -1)
+    {
+        /* convert Unix-style hidden files to a DOS hidden file attribute */
+        if (is_hidden_file( path ))
+            *attr |= FILE_ATTRIBUTE_HIDDEN;
+        return ret;
+    }
     *attr |= get_file_xattr( hexattr, len );
     return ret;
 }
@@ -3741,7 +3744,7 @@ NTSTATUS set_file_info( const char *path, ULONG attr )
     /* Note: unix mode already set when called this way */
     attr &= ~FILE_ATTRIBUTE_NORMAL; /* do not store everything, but keep everything Samba can use */
     len = sprintf( hexattr, "0x%x", attr );
-    if (attr != 0)
+    if (attr != 0 || is_hidden_file( path ))
         xattr_set( path, SAMBA_XATTR_DOS_ATTRIB, hexattr, len );
     else
         xattr_remove( path, SAMBA_XATTR_DOS_ATTRIB );
