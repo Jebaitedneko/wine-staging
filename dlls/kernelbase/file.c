@@ -1272,6 +1272,7 @@ HANDLE WINAPI DECLSPEC_HOTPATCH FindFirstFileExW( LPCWSTR filename, FINDEX_INFO_
     WCHAR *mask;
     BOOL has_wildcard = FALSE;
     FIND_FIRST_INFO *info = NULL;
+    UNICODE_STRING mask_str;
     UNICODE_STRING nt_name;
     OBJECT_ATTRIBUTES attr;
     IO_STATUS_BLOCK io;
@@ -1302,6 +1303,8 @@ HANDLE WINAPI DECLSPEC_HOTPATCH FindFirstFileExW( LPCWSTR filename, FINDEX_INFO_
         SetLastError( ERROR_PATH_NOT_FOUND );
         return INVALID_HANDLE_VALUE;
     }
+
+    RtlInitUnicodeString( &mask_str, NULL );
 
     if (!mask && (device = RtlIsDosDeviceName_U( filename )))
     {
@@ -1336,8 +1339,26 @@ HANDLE WINAPI DECLSPEC_HOTPATCH FindFirstFileExW( LPCWSTR filename, FINDEX_INFO_
     }
     else
     {
+        static const WCHAR invalidW[] = { '<', '>', '\"', 0 };
+        DWORD mask_len = lstrlenW( mask );
+
+        /* strip invalid characters from mask */
+        while (mask_len && wcschr( invalidW, mask[mask_len - 1] ))
+            mask_len--;
+
+        if (!mask_len)
+        {
+            has_wildcard = TRUE;
+            RtlInitUnicodeString( &mask_str, L"*?" );
+        }
+        else
+        {
+            has_wildcard = wcspbrk( mask, L"*?" ) != NULL;
+            RtlInitUnicodeString( &mask_str, mask );
+            mask_str.Length = mask_len * sizeof(WCHAR);
+        }
+
         nt_name.Length = (mask - nt_name.Buffer) * sizeof(WCHAR);
-        has_wildcard = wcspbrk( mask, L"*?" ) != NULL;
         size = has_wildcard ? 8192 : max_entry_size;
     }
 
@@ -1398,9 +1419,6 @@ HANDLE WINAPI DECLSPEC_HOTPATCH FindFirstFileExW( LPCWSTR filename, FINDEX_INFO_
     }
     else
     {
-        UNICODE_STRING mask_str;
-
-        RtlInitUnicodeString( &mask_str, mask );
         status = NtQueryDirectoryFile( info->handle, 0, NULL, NULL, &io, info->data, info->data_size,
                                        FileBothDirectoryInformation, FALSE, &mask_str, TRUE );
         if (status)
