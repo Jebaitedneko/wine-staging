@@ -86,6 +86,10 @@ static void CDECL nulldrv_SetWindowIcon( HWND hwnd, UINT type, HICON icon )
 {
 }
 
+static void CDECL nulldrv_SetLayeredWindowAttributes( HWND hwnd, COLORREF key, BYTE alpha, DWORD flags )
+{
+}
+
 static void CDECL nulldrv_SetWindowText( HWND hwnd, LPCWSTR text )
 {
 }
@@ -155,6 +159,7 @@ static struct user_driver_funcs lazy_load_driver =
     NULL,
     NULL,
     NULL,
+    nulldrv_SetLayeredWindowAttributes,
     NULL,
     NULL,
     nulldrv_SetWindowIcon,

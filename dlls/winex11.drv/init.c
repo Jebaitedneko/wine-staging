@@ -397,6 +397,7 @@ static const struct user_driver_funcs x11drv_funcs =
     .pMsgWaitForMultipleObjectsEx = X11DRV_MsgWaitForMultipleObjectsEx,
     .pReleaseDC = X11DRV_ReleaseDC,
     .pScrollDC = X11DRV_ScrollDC,
+    .pSetActiveWindow = X11DRV_SetActiveWindow,
     .pSetCapture = X11DRV_SetCapture,
     .pSetFocus = X11DRV_SetFocus,
     .pSetLayeredWindowAttributes = X11DRV_SetLayeredWindowAttributes,
