@@ -1277,6 +1277,10 @@ static BOOL set_active_window( HWND hwnd, HWND *prev, BOOL mouse, BOOL focus )
                       (LPARAM)previous );
         if (NtUserGetAncestor( hwnd, GA_PARENT ) == get_desktop_window())
             post_message( get_desktop_window(), WM_PARENTNOTIFY, WM_NCACTIVATE, (LPARAM)hwnd );
+
+        if (hwnd == NtUserGetForegroundWindow() && !is_iconic( hwnd ))
+            NtUserSetActiveWindow( hwnd );
+
     }
 
     /* now change focus if necessary */
