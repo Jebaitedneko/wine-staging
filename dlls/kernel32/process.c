@@ -850,13 +850,21 @@ BOOL WINAPI GetProcessDEPPolicy(HANDLE process, LPDWORD flags, PBOOL permanent)
     if (flags)
     {
         *flags = 0;
-        if (dep_flags & MEM_EXECUTE_OPTION_DISABLE)
-            *flags |= PROCESS_DEP_ENABLE;
-        if (dep_flags & MEM_EXECUTE_OPTION_DISABLE_THUNK_EMULATION)
-            *flags |= PROCESS_DEP_DISABLE_ATL_THUNK_EMULATION;
+        if (system_DEP_policy != AlwaysOff)
+        {
+            if (dep_flags & MEM_EXECUTE_OPTION_DISABLE || system_DEP_policy == AlwaysOn)
+                *flags |= PROCESS_DEP_ENABLE;
+            if (dep_flags & MEM_EXECUTE_OPTION_DISABLE_THUNK_EMULATION)
+                *flags |= PROCESS_DEP_DISABLE_ATL_THUNK_EMULATION;
+        }
     }
 
-    if (permanent) *permanent = (dep_flags & MEM_EXECUTE_OPTION_PERMANENT) != 0;
+    if (permanent)
+    {
+        *permanent = (dep_flags & MEM_EXECUTE_OPTION_PERMANENT) != 0;
+        if (system_DEP_policy == AlwaysOn || system_DEP_policy == AlwaysOff)
+            *permanent = TRUE;
+    }
     return TRUE;
 }
 
