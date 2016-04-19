@@ -33,6 +33,7 @@
 #include "winnls.h"
 #include "wincon.h"
 #include "kernel_private.h"
+#include "winreg.h"
 #include "psapi.h"
 #include "wine/exception.h"
 #include "wine/server.h"
@@ -555,8 +556,73 @@ DWORD WINAPI WTSGetActiveConsoleSessionId(void)
  */
 DEP_SYSTEM_POLICY_TYPE WINAPI GetSystemDEPPolicy(void)
 {
-    FIXME("stub\n");
-    return OptIn;
+    char buffer[MAX_PATH+10];
+    DWORD size = sizeof(buffer);
+    HKEY hkey = 0;
+    HKEY appkey = 0;
+    DWORD len;
+    LSTATUS (WINAPI *pRegOpenKeyA)(HKEY,LPCSTR,PHKEY);
+    LSTATUS (WINAPI *pRegQueryValueExA)(HKEY,LPCSTR,LPDWORD,LPDWORD,LPBYTE,LPDWORD);
+    LSTATUS (WINAPI *pRegCloseKey)(HKEY);
+
+    TRACE("()\n");
+
+    pRegOpenKeyA = (void*)GetProcAddress(GetModuleHandleA("advapi32"), "RegOpenKeyA");
+    pRegQueryValueExA = (void*)GetProcAddress(GetModuleHandleA("advapi32"), "RegQueryValueExA");
+    pRegCloseKey = (void*)GetProcAddress(GetModuleHandleA("advapi32"), "RegCloseKey");
+    if ( !pRegOpenKeyA || !pRegQueryValueExA || !pRegCloseKey ) return OptIn;
+
+    /* @@ Wine registry key: HKCU\Software\Wine\Boot.ini */
+    if ( pRegOpenKeyA( HKEY_CURRENT_USER, "Software\\Wine\\Boot.ini", &hkey ) ) hkey = 0;
+
+    len = GetModuleFileNameA( 0, buffer, MAX_PATH );
+    if (len && len < MAX_PATH)
+    {
+        HKEY tmpkey;
+        /* @@ Wine registry key: HKCU\Software\Wine\AppDefaults\app.exe\Boot.ini */
+        if (!pRegOpenKeyA( HKEY_CURRENT_USER, "Software\\Wine\\AppDefaults", &tmpkey ))
+        {
+            char *p, *appname = buffer;
+            if ((p = strrchr( appname, '/' ))) appname = p + 1;
+            if ((p = strrchr( appname, '\\' ))) appname = p + 1;
+            strcat( appname, "\\Boot.ini" );
+            TRACE("appname = [%s]\n", appname);
+            if (pRegOpenKeyA( tmpkey, appname, &appkey )) appkey = 0;
+            pRegCloseKey( tmpkey );
+        }
+    }
+
+    if (hkey || appkey)
+    {
+        if ((appkey && !pRegQueryValueExA(appkey, "NoExecute", 0, NULL, (BYTE *)buffer, &size)) ||
+            (hkey && !pRegQueryValueExA(hkey, "NoExecute", 0, NULL, (BYTE *)buffer, &size)))
+        {
+            if (!strcmp(buffer,"OptIn"))
+            {
+                TRACE("System DEP policy set to OptIn\n");
+                system_DEP_policy = OptIn;
+            }
+            else if (!strcmp(buffer,"OptOut"))
+            {
+                TRACE("System DEP policy set to OptOut\n");
+                system_DEP_policy = OptIn;
+            }
+            else if (!strcmp(buffer,"AlwaysOn"))
+            {
+                TRACE("System DEP policy set to AlwaysOn\n");
+                system_DEP_policy = AlwaysOn;
+            }
+            else if (!strcmp(buffer,"AlwaysOff"))
+            {
+                TRACE("System DEP policy set to AlwaysOff\n");
+                system_DEP_policy = AlwaysOff;
+            }
+        }
+    }
+
+    if (appkey) pRegCloseKey( appkey );
+    if (hkey) pRegCloseKey( hkey );
+    return system_DEP_policy;
 }
 
 /**********************************************************************
