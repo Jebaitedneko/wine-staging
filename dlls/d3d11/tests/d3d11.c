@@ -2266,6 +2266,8 @@ static void test_create_deferred_context(void)
 
     hr = ID3D11Device_CreateDeferredContext(device, 0, &context);
     todo_wine ok(hr == DXGI_ERROR_INVALID_CALL, "Failed to create deferred context, hr %#x.\n", hr);
+    if (SUCCEEDED(hr))
+        ID3D11DeviceContext_Release(context);
 
     refcount = ID3D11Device_Release(device);
     ok(!refcount, "Device has %u references left.\n", refcount);
@@ -2278,7 +2280,7 @@ static void test_create_deferred_context(void)
 
     expected_refcount = get_refcount(device) + 1;
     hr = ID3D11Device_CreateDeferredContext(device, 0, &context);
-    todo_wine ok(hr == S_OK, "Failed to create deferred context, hr %#x.\n", hr);
+    ok(hr == S_OK, "Failed to create deferred context, hr %#x.\n", hr);
     if (FAILED(hr))
         goto done;
     refcount = get_refcount(device);
