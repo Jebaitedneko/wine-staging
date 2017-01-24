@@ -83,6 +83,7 @@ enum deferred_cmd
 
     DEFERRED_CSSETUNORDEREDACCESSVIEWS, /* unordered_view */
 
+    DEFERRED_DRAW,                      /* draw_info */
     DEFERRED_DRAWINDEXED,               /* draw_indexed_info */
     DEFERRED_DRAWINDEXEDINSTANCED,      /* draw_indexed_inst_info */
 
@@ -197,6 +198,11 @@ struct deferred_call
             ID3D11UnorderedAccessView **views;
             UINT *initial_counts;
         } unordered_view;
+        struct
+        {
+            UINT count;
+            UINT start;
+        } draw_info;
         struct
         {
             UINT count;
@@ -473,6 +479,7 @@ static void free_deferred_calls(struct list *commands)
                 }
                 break;
             }
+            case DEFERRED_DRAW:
             case DEFERRED_DRAWINDEXED:
             case DEFERRED_DRAWINDEXEDINSTANCED:
             {
@@ -652,6 +659,11 @@ static void exec_deferred_calls(ID3D11DeviceContext1 *iface, struct list *comman
             {
                 ID3D11DeviceContext1_CSSetUnorderedAccessViews(iface, call->unordered_view.start_slot,
                         call->unordered_view.num_views, call->unordered_view.views, call->unordered_view.initial_counts);
+                break;
+            }
+            case DEFERRED_DRAW:
+            {
+                ID3D11DeviceContext1_Draw(iface, call->draw_info.count, call->draw_info.start);
                 break;
             }
             case DEFERRED_DRAWINDEXED:
@@ -4095,8 +4107,18 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_DrawIndexed(ID3D11DeviceCon
 static void STDMETHODCALLTYPE d3d11_deferred_context_Draw(ID3D11DeviceContext *iface,
         UINT vertex_count, UINT start_vertex_location)
 {
-    FIXME("iface %p, vertex_count %u, start_vertex_location %u stub!\n",
+    struct d3d11_deferred_context *context = impl_from_deferred_ID3D11DeviceContext(iface);
+    struct deferred_call *call;
+
+    TRACE("iface %p, vertex_count %u, start_vertex_location %u.\n",
             iface, vertex_count, start_vertex_location);
+
+    if (!(call = add_deferred_call(context, 0)))
+        return;
+
+    call->cmd = DEFERRED_DRAW;
+    call->draw_info.count = vertex_count;
+    call->draw_info.start = start_vertex_location;
 }
 
 static HRESULT STDMETHODCALLTYPE d3d11_deferred_context_Map(ID3D11DeviceContext *iface, ID3D11Resource *resource,
