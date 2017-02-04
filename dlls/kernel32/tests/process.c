@@ -4266,6 +4266,26 @@ static void test_handle_list_attribute(BOOL child, HANDLE handle1, HANDLE handle
     CloseHandle(pipe[1]);
 }
 
+static void test_GetActiveProcessorCount(void)
+{
+    DWORD count;
+
+    if (!pGetActiveProcessorCount)
+    {
+        win_skip("GetActiveProcessorCount not available, skipping test\n");
+        return;
+    }
+
+    count = pGetActiveProcessorCount(0);
+    ok(count, "GetActiveProcessorCount failed, error %u\n", GetLastError());
+
+    /* Test would fail on systems with more than 6400 processors */
+    SetLastError(0xdeadbeef);
+    count = pGetActiveProcessorCount(101);
+    ok(count == 0, "Expeced GetActiveProcessorCount to fail\n");
+    ok(GetLastError() == ERROR_INVALID_PARAMETER, "Expected ERROR_INVALID_PARAMETER, got %u\n", GetLastError());
+}
+
 START_TEST(process)
 {
     HANDLE job, hproc, h, h2;
@@ -4382,6 +4402,7 @@ START_TEST(process)
     test_GetNumaProcessorNode();
     test_session_info();
     test_GetLogicalProcessorInformationEx();
+    test_GetActiveProcessorCount();
     test_largepages();
     test_ProcThreadAttributeList();
     test_SuspendProcessState();
