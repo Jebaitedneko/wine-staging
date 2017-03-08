@@ -7542,7 +7542,10 @@ NTSTATUS WINAPI NtQueryObject( HANDLE handle, OBJECT_INFORMATION_CLASS info_clas
                 }
                 if (status == STATUS_SUCCESS)
                 {
-                    p->TypeIndex = reply->index;
+                    WORD version = MAKEWORD(NtCurrentTeb()->Peb->OSMinorVersion,
+                                            NtCurrentTeb()->Peb->OSMajorVersion);
+                    if (version >= 0x0602)
+                        p->TypeIndex = reply->index;
                 }
             }
         }
