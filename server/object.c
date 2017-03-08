@@ -705,7 +705,7 @@ void no_destroy( struct object *obj )
 
 static const struct unicode_str type_array[] =
 {
-    {type_ObjectType,    sizeof(type_ObjectType)},
+    {type_Type,          sizeof(type_Type)},
     {type_Directory,     sizeof(type_Directory)},
     {type_SymbolicLink,  sizeof(type_SymbolicLink)},
     {type_Token,         sizeof(type_Token)},
