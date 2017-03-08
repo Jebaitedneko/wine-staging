@@ -79,6 +79,21 @@ static NTSTATUS (WINAPI *pNtOpenProcess)( HANDLE *, ACCESS_MASK, const OBJECT_AT
 #define KEYEDEVENT_WAKE       0x0002
 #define KEYEDEVENT_ALL_ACCESS (STANDARD_RIGHTS_REQUIRED | 0x0003)
 
+#define ROUND_UP(value, alignment) (((value) + ((alignment) - 1)) & ~((alignment)-1))
+
+static LPCSTR wine_dbgstr_us( const UNICODE_STRING *us )
+{
+    if (!us) return "(null)";
+    return wine_dbgstr_wn(us->Buffer, us->Length / sizeof(WCHAR));
+}
+
+static inline int strncmpW( const WCHAR *str1, const WCHAR *str2, int n )
+{
+    if (n <= 0) return 0;
+    while ((--n > 0) && *str1 && (*str1 == *str2)) { str1++; str2++; }
+    return *str1 - *str2;
+}
+
 static void test_case_sensitive (void)
 {
     NTSTATUS status;
@@ -1556,6 +1571,47 @@ static void test_query_object(void)
     pNtClose(handle);
 }
 
+static void test_query_object_types(void)
+{
+    static const WCHAR typeW[] = {'T','y','p','e'};
+    OBJECT_TYPES_INFORMATION *buffer;
+    OBJECT_TYPE_INFORMATION *type;
+    NTSTATUS status;
+    ULONG len, i;
+
+    buffer = HeapAlloc( GetProcessHeap(), 0, sizeof(OBJECT_TYPES_INFORMATION) );
+    ok( buffer != NULL, "Failed to allocate memory\n" );
+
+    status = pNtQueryObject( NULL, ObjectTypesInformation, buffer, sizeof(OBJECT_TYPES_INFORMATION), &len );
+    ok( status == STATUS_INFO_LENGTH_MISMATCH, "NtQueryObject failed %x\n", status );
+    ok( len, "len is zero\n");
+
+    buffer = HeapReAlloc( GetProcessHeap(), 0, buffer, len );
+    ok( buffer != NULL, "Failed to allocate memory\n" );
+
+    memset( buffer, 0, len );
+    status = pNtQueryObject( NULL, ObjectTypesInformation, buffer, len, &len );
+    ok( status == STATUS_SUCCESS, "NtQueryObject failed %x\n", status );
+    ok( buffer->NumberOfTypes, "NumberOfTypes is zero\n" );
+
+    type = (OBJECT_TYPE_INFORMATION *)(buffer + 1);
+    for (i = 0; i < buffer->NumberOfTypes; i++)
+    {
+        USHORT length = type->TypeName.MaximumLength;
+        trace( "Type %u: %s\n", i, wine_dbgstr_us(&type->TypeName) );
+
+        if (i == 0)
+        {
+            todo_wine ok( type->TypeName.Length == sizeof(typeW) && !strncmpW(typeW, type->TypeName.Buffer, 4),
+                "Expected 'Type' as first type, got %s\n", wine_dbgstr_us(&type->TypeName) );
+        }
+
+        type = (OBJECT_TYPE_INFORMATION *)ROUND_UP( (DWORD_PTR)(type + 1) + length, sizeof(DWORD_PTR) );
+    }
+
+    HeapFree( GetProcessHeap(), 0, buffer );
+}
+
 static void test_type_mismatch(void)
 {
     HANDLE h;
@@ -2204,6 +2260,7 @@ START_TEST(om)
     test_directory();
     test_symboliclink();
     test_query_object();
+    test_query_object_types();
     test_type_mismatch();
     test_event();
     test_mutant();
