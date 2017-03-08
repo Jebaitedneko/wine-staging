@@ -3986,7 +3986,8 @@ static void dump_get_object_type_request( const struct get_object_type_request *
 
 static void dump_get_object_type_reply( const struct get_object_type_reply *req )
 {
-    fprintf( stderr, " total=%u", req->total );
+    fprintf( stderr, " index=%08x", req->index );
+    fprintf( stderr, ", total=%u", req->total );
     dump_varargs_unicode_str( ", type=", cur_size );
 }
 

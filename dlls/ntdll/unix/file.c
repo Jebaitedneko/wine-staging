@@ -7540,6 +7540,10 @@ NTSTATUS WINAPI NtQueryObject( HANDLE handle, OBJECT_INFORMATION_CLASS info_clas
                     p->TypeName.Buffer[res / sizeof(WCHAR)] = 0;
                     if (used_len) *used_len = sizeof(*p) + p->TypeName.MaximumLength;
                 }
+                if (status == STATUS_SUCCESS)
+                {
+                    p->TypeIndex = reply->index;
+                }
             }
         }
         SERVER_END_REQ;
