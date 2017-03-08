@@ -174,8 +174,7 @@ static void token_dump( struct object *obj, int verbose )
 
 static struct object_type *token_get_type( struct object *obj )
 {
-    static const WCHAR name[] = {'T','o','k','e','n'};
-    static const struct unicode_str str = { name, sizeof(name) };
+    static const struct unicode_str str = { type_Token, sizeof(type_Token) };
     return get_object_type( &str );
 }
 

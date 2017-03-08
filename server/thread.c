@@ -467,8 +467,7 @@ static void dump_thread( struct object *obj, int verbose )
 
 static struct object_type *thread_get_type( struct object *obj )
 {
-    static const WCHAR name[] = {'T','h','r','e','a','d'};
-    static const struct unicode_str str = { name, sizeof(name) };
+    static const struct unicode_str str = { type_Thread, sizeof(type_Thread) };
     return get_object_type( &str );
 }
 
