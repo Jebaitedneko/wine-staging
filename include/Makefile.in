@@ -15,6 +15,7 @@ SOURCES = \
 	amsi.idl \
 	amstream.idl \
 	amvideo.idl \
+	apiset.h \
 	appcompatapi.h \
 	appmgmt.h \
 	appmodel.h \
