@@ -115,6 +115,9 @@ struct file_id
     BYTE ObjectId[16];
 };
 
+#define HASH_MAP_SIZE 32
+static LIST_ENTRY hash_table[HASH_MAP_SIZE];
+
 /* internal representation of loaded modules */
 typedef struct _wine_modref
 {
@@ -452,6 +455,52 @@ static void call_ldr_notifications( ULONG reason, LDR_DATA_TABLE_ENTRY *module )
 
         TRACE_(relay)("\1Ret  LDR notification callback (proc=%p,reason=%u,data=%p,context=%p)\n",
                 notify->callback, reason, &data, notify->context );
+    }
+}
+
+/*************************************************************************
+ *      hash_basename
+ *
+ * Calculates the bucket index of a dll using the basename.
+ */
+static ULONG hash_basename(const WCHAR *basename)
+{
+    WORD version = MAKEWORD(NtCurrentTeb()->Peb->OSMinorVersion,
+                            NtCurrentTeb()->Peb->OSMajorVersion);
+    ULONG hash = 0;
+
+    if (version >= 0x0602)
+    {
+        for (; *basename; basename++)
+            hash = hash * 65599 + towupper(*basename);
+    }
+    else if (version == 0x0601)
+    {
+        for (; *basename; basename++)
+            hash = hash + 65599 * towupper(*basename);
+    }
+    else
+        hash = towupper(basename[0]) - 'A';
+
+    return hash & (HASH_MAP_SIZE-1);
+}
+
+/*************************************************************************
+ *      recompute_hash_maps
+ *
+ * Recomputes the LDR hash map (necessary when windows version changes).
+ */
+static void recompute_hash_map(void)
+{
+    LIST_ENTRY *mark, *entry;
+    LDR_DATA_TABLE_ENTRY *mod;
+
+    mark = &NtCurrentTeb()->Peb->LdrData->InLoadOrderModuleList;
+    for (entry = mark->Flink; entry != mark; entry = entry->Flink)
+    {
+        mod = CONTAINING_RECORD(entry, LDR_DATA_TABLE_ENTRY, InLoadOrderLinks);
+        RemoveEntryList( &mod->HashLinks );
+        InsertTailList( &hash_table[hash_basename(mod->BaseDllName.Buffer)], &mod->HashLinks );
     }
 }
 
@@ -1197,7 +1246,12 @@ static WINE_MODREF *alloc_module( HMODULE hModule, const UNICODE_STRING *nt_name
                    &wm->ldr.InLoadOrderLinks);
     InsertTailList(&NtCurrentTeb()->Peb->LdrData->InMemoryOrderModuleList,
                    &wm->ldr.InMemoryOrderLinks);
+    InsertTailList(&hash_table[hash_basename(wm->ldr.BaseDllName.Buffer)],
+                   &wm->ldr.HashLinks);
+
     /* wait until init is called for inserting into InInitializationOrderModuleList */
+    wm->ldr.InInitializationOrderLinks.Flink = NULL;
+    wm->ldr.InInitializationOrderLinks.Blink = NULL;
 
     if (!(nt->OptionalHeader.DllCharacteristics & IMAGE_DLLCHARACTERISTICS_NX_COMPAT))
     {
@@ -1875,6 +1929,7 @@ static NTSTATUS build_module( LPCWSTR load_path, const UNICODE_STRING *nt_name, 
             /* the module has only be inserted in the load & memory order lists */
             RemoveEntryList(&wm->ldr.InLoadOrderLinks);
             RemoveEntryList(&wm->ldr.InMemoryOrderLinks);
+            RemoveEntryList(&wm->ldr.HashLinks);
 
             /* FIXME: there are several more dangling references
              * left. Including dlls loaded by this dll before the
@@ -3248,6 +3303,7 @@ static void free_modref( WINE_MODREF *wm )
 {
     RemoveEntryList(&wm->ldr.InLoadOrderLinks);
     RemoveEntryList(&wm->ldr.InMemoryOrderLinks);
+    RemoveEntryList(&wm->ldr.HashLinks);
     if (wm->ldr.InInitializationOrderLinks.Flink)
         RemoveEntryList(&wm->ldr.InInitializationOrderLinks);
 
@@ -3957,6 +4013,7 @@ static NTSTATUS process_init(void)
     INITIAL_TEB stack;
     TEB *teb = NtCurrentTeb();
     PEB *peb = teb->Peb;
+    DWORD i;
 
     peb->LdrData            = &ldr;
     peb->FastPebLock        = &peb_lock;
@@ -3991,6 +4048,10 @@ static NTSTATUS process_init(void)
 
     load_global_options();
     version_init();
+
+    /* initialize hash table */
+    for (i = 0; i < HASH_MAP_SIZE; i++)
+        InitializeListHead(&hash_table[i]);
 
     if (!(status = load_dll( params->DllPath.Buffer, params->ImagePathName.Buffer, NULL,
                              DONT_RESOLVE_DLL_REFERENCES, &wm )))
@@ -4075,6 +4136,10 @@ static NTSTATUS process_init(void)
     teb->Tib.StackBase = stack.StackBase;
     teb->Tib.StackLimit = stack.StackLimit;
     teb->DeallocationStack = stack.DeallocationStack;
+
+    /* the windows version was not set yet when ntdll and kernel32 were loaded */
+    recompute_hash_map();
+
     return STATUS_SUCCESS;
 }
 
