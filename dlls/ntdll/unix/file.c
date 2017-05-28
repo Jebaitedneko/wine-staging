@@ -3645,7 +3645,7 @@ NTSTATUS CDECL wine_nt_to_unix_file_name( const UNICODE_STRING *nameW, char *nam
 }
 
 /* read the contents of an NT symlink object */
-static NTSTATUS read_nt_symlink( HANDLE root, UNICODE_STRING *name, WCHAR *target, size_t length )
+NTSTATUS read_nt_symlink( HANDLE root, UNICODE_STRING *name, WCHAR *target, size_t length )
 {
     OBJECT_ATTRIBUTES attr;
     UNICODE_STRING targetW;
