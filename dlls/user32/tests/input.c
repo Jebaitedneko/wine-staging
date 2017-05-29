@@ -86,6 +86,7 @@ static int (WINAPI *pGetMouseMovePointsEx) (UINT, LPMOUSEMOVEPOINT, LPMOUSEMOVEP
 static UINT (WINAPI *pGetRawInputDeviceList) (PRAWINPUTDEVICELIST, PUINT, UINT);
 static UINT (WINAPI *pGetRawInputDeviceInfoW) (HANDLE, UINT, void *, UINT *);
 static UINT (WINAPI *pGetRawInputDeviceInfoA) (HANDLE, UINT, void *, UINT *);
+static int  (WINAPI *pGetWindowRgnBox)(HWND, LPRECT);
 static BOOL (WINAPI *pIsWow64Process)(HANDLE, PBOOL);
 
 #define MAXKEYEVENTS 12
@@ -165,6 +166,7 @@ static void init_function_pointers(void)
     GET_PROC(GetRawInputDeviceList);
     GET_PROC(GetRawInputDeviceInfoW);
     GET_PROC(GetRawInputDeviceInfoA);
+    GET_PROC(GetWindowRgnBox);
 
     hdll = GetModuleHandleA("kernel32");
     GET_PROC(IsWow64Process);
@@ -3196,6 +3198,9 @@ static void test_Input_mouse(void)
     DWORD thread_id;
     WNDCLASSA wclass;
     POINT pt, pt_org;
+    int region_type;
+    HRGN hregion;
+    RECT region;
     MSG msg;
     BOOL ret;
 
@@ -3434,6 +3439,12 @@ static void test_Input_mouse(void)
     while (wait_for_message(&msg)) DispatchMessageA(&msg);
     Sleep(100);
 
+    if (pGetWindowRgnBox)
+    {
+        region_type = pGetWindowRgnBox(hwnd, &region);
+        ok(region_type == ERROR, "expected ERROR, got %d\n", region_type);
+    }
+
     got_button_down = got_button_up = FALSE;
     simulate_click(TRUE, 150, 150);
     while (wait_for_message(&msg))
@@ -3459,6 +3470,12 @@ static void test_Input_mouse(void)
     ok(ret, "SetLayeredWindowAttributes failed\n");
     while (wait_for_message(&msg)) DispatchMessageA(&msg);
     Sleep(100);
+
+    if (pGetWindowRgnBox)
+    {
+        region_type = pGetWindowRgnBox(hwnd, &region);
+        ok(region_type == ERROR, "expected ERROR, got %d\n", region_type);
+    }
 
     got_button_down = got_button_up = FALSE;
     simulate_click(TRUE, 150, 150);
@@ -3488,6 +3505,12 @@ static void test_Input_mouse(void)
     while (wait_for_message(&msg)) DispatchMessageA(&msg);
     Sleep(100);
 
+    if (pGetWindowRgnBox)
+    {
+        region_type = pGetWindowRgnBox(hwnd, &region);
+        ok(region_type == ERROR, "expected ERROR, got %d\n", region_type);
+    }
+
     got_button_down = got_button_up = FALSE;
     simulate_click(TRUE, 150, 150);
     while (wait_for_message(&msg))
@@ -3513,6 +3536,12 @@ static void test_Input_mouse(void)
     ok(ret, "SetLayeredWindowAttributes failed\n");
     while (wait_for_message(&msg)) DispatchMessageA(&msg);
     Sleep(100);
+
+    if (pGetWindowRgnBox)
+    {
+        region_type = pGetWindowRgnBox(hwnd, &region);
+        ok(region_type == ERROR, "expected ERROR, got %d\n", region_type);
+    }
 
     got_button_down = got_button_up = FALSE;
     simulate_click(TRUE, 150, 150);
@@ -3541,6 +3570,12 @@ static void test_Input_mouse(void)
     while (wait_for_message(&msg)) DispatchMessageA(&msg);
     Sleep(100);
 
+    if (pGetWindowRgnBox)
+    {
+        region_type = pGetWindowRgnBox(hwnd, &region);
+        ok(region_type == ERROR, "expected ERROR, got %d\n", region_type);
+    }
+
     got_button_down = got_button_up = FALSE;
     simulate_click(TRUE, 150, 150);
     while (wait_for_message(&msg))
@@ -3555,6 +3590,41 @@ static void test_Input_mouse(void)
         else if (msg.message == WM_LBUTTONUP)
         {
             ok(msg.hwnd == hwnd, "msg.hwnd = %p\n", msg.hwnd);
+            got_button_up = TRUE;
+            break;
+        }
+    }
+    ok(got_button_down, "expected WM_LBUTTONDOWN message\n");
+    ok(got_button_up, "expected WM_LBUTTONUP message\n");
+
+    hregion = CreateRectRgn(0, 0, 10, 10);
+    ok(hregion != NULL, "CreateRectRgn failed\n");
+    ret = SetWindowRgn(hwnd, hregion, TRUE);
+    ok(ret, "SetWindowRgn failed\n");
+    DeleteObject(hregion);
+    while (wait_for_message(&msg)) DispatchMessageA(&msg);
+    Sleep(1000);
+
+    if (pGetWindowRgnBox)
+    {
+        region_type = pGetWindowRgnBox(hwnd, &region);
+        ok(region_type == SIMPLEREGION, "expected SIMPLEREGION, got %d\n", region_type);
+    }
+
+    got_button_down = got_button_up = FALSE;
+    simulate_click(TRUE, 150, 150);
+    while (wait_for_message(&msg))
+    {
+        DispatchMessageA(&msg);
+
+        if (msg.message == WM_LBUTTONDOWN)
+        {
+            ok(msg.hwnd == button_win, "msg.hwnd = %p\n", msg.hwnd);
+            got_button_down = TRUE;
+        }
+        else if (msg.message == WM_LBUTTONUP)
+        {
+            ok(msg.hwnd == button_win, "msg.hwnd = %p\n", msg.hwnd);
             got_button_up = TRUE;
             break;
         }
