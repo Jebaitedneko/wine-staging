@@ -215,6 +215,10 @@ case $host in
         [AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <stdarg.h>]], [[void func(__builtin_ms_va_list *args);]])],
                       [wine_cv_builtin_ms_va_list=yes],[wine_cv_builtin_ms_va_list=no])])
     test $wine_cv_builtin_ms_va_list != no || AC_MSG_ERROR([You need clang >= 5.0 to build Wine for arm64.])
+    # Avoid clobbering the x18 register which is reserved in windows.
+    # This isn't complete/enough unless all of the system libraries have
+    # been built with the same flag though.
+    WINE_TRY_CFLAGS([-ffixed-x18], [CFLAGS="$CFLAGS -ffixed-x18"])
     ;;
   i[[3456789]]86*)
     enable_win16=${enable_win16:-yes}
