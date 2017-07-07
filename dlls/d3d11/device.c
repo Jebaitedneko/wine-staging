@@ -52,6 +52,7 @@ enum deferred_cmd
     DEFERRED_PSSETSHADERRESOURCES,      /* res_info */
     DEFERRED_VSSETSHADERRESOURCES,      /* res_info */
 
+    DEFERRED_CSSETSAMPLERS,             /* samplers_info */
     DEFERRED_DSSETSAMPLERS,             /* samplers_info */
     DEFERRED_PSSETSAMPLERS,             /* samplers_info */
 
@@ -292,7 +293,7 @@ static void add_deferred_set_shader_resources(struct d3d11_deferred_context *con
     }
 }
 
-/* for DEFERRED_DSSETSAMPLERS and DEFERRED_PSSETSAMPLERS */
+/* for DEFERRED_CSSETSAMPLERS, DEFERRED_DSSETSAMPLERS and DEFERRED_PSSETSAMPLERS */
 static void add_deferred_set_samplers(struct d3d11_deferred_context *context, enum deferred_cmd cmd,
         UINT start_slot, UINT sampler_count, ID3D11SamplerState *const *samplers)
 {
@@ -452,6 +453,7 @@ static void free_deferred_calls(struct list *commands)
                 }
                 break;
             }
+            case DEFERRED_CSSETSAMPLERS:
             case DEFERRED_DSSETSAMPLERS:
             case DEFERRED_PSSETSAMPLERS:
             {
@@ -652,6 +654,12 @@ static void exec_deferred_calls(ID3D11DeviceContext1 *iface, struct list *comman
             {
                 ID3D11DeviceContext1_VSSetShaderResources(iface, call->res_info.start_slot,
                         call->res_info.num_views, call->res_info.views);
+                break;
+            }
+            case DEFERRED_CSSETSAMPLERS:
+            {
+                ID3D11DeviceContext1_CSSetSamplers(iface, call->samplers_info.start_slot,
+                        call->samplers_info.num_samplers, call->samplers_info.samplers);
                 break;
             }
             case DEFERRED_DSSETSAMPLERS:
@@ -4850,8 +4858,12 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_CSSetShader(ID3D11DeviceCon
 static void STDMETHODCALLTYPE d3d11_deferred_context_CSSetSamplers(ID3D11DeviceContext *iface,
         UINT start_slot, UINT sampler_count, ID3D11SamplerState *const *samplers)
 {
-    FIXME("iface %p, start_slot %u, sampler_count %u, samplers %p stub!\n",
+    struct d3d11_deferred_context *context = impl_from_deferred_ID3D11DeviceContext(iface);
+
+    TRACE("iface %p, start_slot %u, sampler_count %u, samplers %p.\n",
             iface, start_slot, sampler_count, samplers);
+
+    add_deferred_set_samplers(context, DEFERRED_CSSETSAMPLERS, start_slot, sampler_count, samplers);
 }
 
 static void STDMETHODCALLTYPE d3d11_deferred_context_CSSetConstantBuffers(ID3D11DeviceContext *iface,
