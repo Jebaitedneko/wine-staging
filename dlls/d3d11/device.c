@@ -198,6 +198,7 @@ static HRESULT STDMETHODCALLTYPE d3d11_immediate_context_QueryInterface(ID3D11De
         REFIID iid, void **out)
 {
     struct d3d11_immediate_context *context = impl_from_ID3D11DeviceContext1(iface);
+    struct d3d_device *device = device_from_immediate_ID3D11DeviceContext1( (ID3D11DeviceContext1*)iface);
 
     TRACE("iface %p, iid %s, out %p.\n", iface, debugstr_guid(iid), out);
 
@@ -211,6 +212,11 @@ static HRESULT STDMETHODCALLTYPE d3d11_immediate_context_QueryInterface(ID3D11De
     else if (IsEqualGUID(iid, &IID_ID3D11Multithread))
     {
         *out = &context->ID3D11Multithread_iface;
+    }
+    else if (IsEqualGUID(iid, &IID_IWineD3DDevice))
+    {
+        *out = device->wined3d_device;
+        return S_OK;
     }
     else
     {
@@ -4141,6 +4147,11 @@ static HRESULT STDMETHODCALLTYPE d3d_device_inner_QueryInterface(IUnknown *iface
     else if (IsEqualGUID(riid, &IID_IWineDXGIDeviceParent))
     {
         *out = &device->IWineDXGIDeviceParent_iface;
+    }
+    else if (IsEqualGUID(riid, &IID_IWineD3DDevice))
+    {
+        *out = device->wined3d_device;
+        return S_OK;
     }
     else
     {
