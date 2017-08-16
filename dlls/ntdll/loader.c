@@ -2072,7 +2072,13 @@ static NTSTATUS build_module( LPCWSTR load_path, const UNICODE_STRING *nt_name, 
 
     if (image_info->u.ImageFlags & IMAGE_FLAGS_WineBuiltin)
     {
-        if (TRACE_ON(relay)) RELAY_SetupDLL( *module );
+#ifdef __aarch64__
+        /* Always enable relay entry points on aarch64, to allow restoring
+         * the TEB to x18. */
+#else
+        if (TRACE_ON(relay))
+#endif
+            RELAY_SetupDLL( *module );
     }
     else
     {
