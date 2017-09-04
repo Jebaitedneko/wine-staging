@@ -39,6 +39,7 @@ enum deferred_cmd
     DEFERRED_OMSETRENDERTARGETS,        /* render_target_info */
 
     DEFERRED_COPYRESOURCE,              /* copy_resource_info */
+    DEFERRED_SETRESOURCEMINLOD,         /* set_resource_min_lod_info */
 
     DEFERRED_CSSETSHADER,               /* cs_info */
     DEFERRED_DSSETSHADER,               /* ds_info */
@@ -144,6 +145,11 @@ struct deferred_call
             ID3D11Resource *dst_resource;
             ID3D11Resource *src_resource;
         } copy_resource_info;
+        struct
+        {
+            ID3D11Resource *resource;
+            FLOAT min_lod;
+        } set_resource_min_lod_info;
         struct
         {
             ID3D11ComputeShader *shader;
@@ -429,6 +435,12 @@ static void free_deferred_calls(struct list *commands)
                     ID3D11Resource_Release(call->copy_resource_info.src_resource);
                 break;
             }
+            case DEFERRED_SETRESOURCEMINLOD:
+            {
+                if (call->set_resource_min_lod_info.resource)
+                    ID3D11Resource_Release(call->set_resource_min_lod_info.resource);
+                break;
+            }
             case DEFERRED_CSSETSHADER:
             {
                 if (call->cs_info.shader)
@@ -631,6 +643,13 @@ static void exec_deferred_calls(ID3D11DeviceContext1 *iface, struct list *comman
                 ID3D11DeviceContext1_CopyResource(iface,
                         call->copy_resource_info.dst_resource,
                         call->copy_resource_info.src_resource);
+                break;
+            }
+            case DEFERRED_SETRESOURCEMINLOD:
+            {
+                ID3D11DeviceContext1_SetResourceMinLOD(iface,
+                        call->set_resource_min_lod_info.resource,
+                        call->set_resource_min_lod_info.min_lod);
                 break;
             }
             case DEFERRED_CSSETSHADER:
@@ -4789,7 +4808,18 @@ static void STDMETHODCALLTYPE d3d11_deferred_context_GenerateMips(ID3D11DeviceCo
 static void STDMETHODCALLTYPE d3d11_deferred_context_SetResourceMinLOD(ID3D11DeviceContext *iface,
         ID3D11Resource *resource, FLOAT min_lod)
 {
-    FIXME("iface %p, resource %p, min_lod %f stub!\n", iface, resource, min_lod);
+    struct d3d11_deferred_context *context = impl_from_deferred_ID3D11DeviceContext(iface);
+    struct deferred_call *call;
+
+    TRACE("iface %p, resource %p, min_lod %f.\n", iface, resource, min_lod);
+
+    if (!(call = add_deferred_call(context, 0)))
+        return;
+
+    call->cmd = DEFERRED_SETRESOURCEMINLOD;
+    if (resource) ID3D11Resource_AddRef(resource);
+    call->set_resource_min_lod_info.resource = resource;
+    call->set_resource_min_lod_info.min_lod = min_lod;
 }
 
 static FLOAT STDMETHODCALLTYPE d3d11_deferred_context_GetResourceMinLOD(ID3D11DeviceContext *iface,
