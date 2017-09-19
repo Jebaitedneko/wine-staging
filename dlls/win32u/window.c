@@ -4185,13 +4185,12 @@ BOOL WINAPI NtUserFlashWindowEx( FLASHWINFO *info )
         if (!win || win == WND_OTHER_PROCESS || win == WND_DESKTOP) return FALSE;
         hwnd = win->obj.handle;  /* make it a full handle */
 
-        if (info->dwFlags) wparam = !(win->flags & WIN_NCACTIVATED);
-        else wparam = (hwnd == NtUserGetForegroundWindow());
+        wparam = (win->flags & WIN_NCACTIVATED) != 0;
 
         release_win_ptr( win );
         send_message( hwnd, WM_NCACTIVATE, wparam, 0 );
         user_driver->pFlashWindowEx( info );
-        return wparam;
+        return (info->dwFlags & FLASHW_CAPTION) ? TRUE : wparam;
     }
 }
 
