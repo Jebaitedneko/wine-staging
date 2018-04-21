@@ -2097,6 +2097,11 @@ XIC X11DRV_get_ic( HWND hwnd )
     XIM xim;
     XIC ret = 0;
 
+    if (!x11drv_thread_data())
+    {
+        release_win_data( data );
+        return NULL;
+    }
     if (data)
     {
         x11drv_thread_data()->last_xic_hwnd = hwnd;
