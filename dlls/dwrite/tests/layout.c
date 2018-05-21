@@ -3357,6 +3357,51 @@ todo_wine
     IDWriteTextLayout_Release(layout);
 
     IDWriteTextFormat_Release(format);
+
+    /* nonexistent font */
+    hr = IDWriteFactory_CreateTextFormat(factory, L"Blah!", NULL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
+        DWRITE_FONT_STRETCH_NORMAL, 10.0, L"en-us", &format);
+    ok(hr == S_OK, "got 0x%08x\n", hr);
+
+    hr = IDWriteFactory_CreateTextLayout(factory, strW, 4, format, 500.0, 1000.0, &layout);
+    ok(hr == S_OK, "got 0x%08x\n", hr);
+
+    count = 0;
+    hr = IDWriteTextLayout_GetClusterMetrics(layout, clusters, 4, &count);
+todo_wine
+    ok(hr == S_OK, "got 0x%08x\n", hr);
+todo_wine
+    ok(count == 4, "got %u\n", count);
+    for (i = 0, width = 0.0; i < count; i++)
+        width += clusters[i].width;
+
+    memset(&metrics, 0xcc, sizeof(metrics));
+    hr = IDWriteTextLayout_GetMetrics(layout, &metrics);
+todo_wine
+    ok(hr == S_OK, "got 0x%08x\n", hr);
+todo_wine
+    ok(metrics.left == 0.0, "got %.2f\n", metrics.left);
+todo_wine
+    ok(metrics.top == 0.0, "got %.2f\n", metrics.top);
+todo_wine
+    ok(metrics.width == width, "got %.2f, expected %.2f\n", metrics.width, width);
+todo_wine
+    ok(metrics.widthIncludingTrailingWhitespace == width, "got %.2f, expected %.2f\n",
+        metrics.widthIncludingTrailingWhitespace, width);
+todo_wine
+    ok(metrics.height > 0.0, "got %.2f\n", metrics.height);
+todo_wine
+    ok(metrics.layoutWidth == 500.0, "got %.2f\n", metrics.layoutWidth);
+todo_wine
+    ok(metrics.layoutHeight == 1000.0, "got %.2f\n", metrics.layoutHeight);
+todo_wine
+    ok(metrics.maxBidiReorderingDepth == 1, "got %u\n", metrics.maxBidiReorderingDepth);
+todo_wine
+    ok(metrics.lineCount == 1, "got %u\n", metrics.lineCount);
+
+    IDWriteTextLayout_Release(layout);
+
+    IDWriteTextFormat_Release(format);
     IDWriteFactory_Release(factory);
 }
 
