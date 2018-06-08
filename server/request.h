@@ -393,6 +393,7 @@ DECL_HANDLER(get_job_info);
 DECL_HANDLER(terminate_job);
 DECL_HANDLER(suspend_process);
 DECL_HANDLER(resume_process);
+DECL_HANDLER(create_esync);
 
 #ifdef WANT_REQUEST_HANDLERS
 
@@ -673,6 +674,7 @@ static const req_handler req_handlers[REQ_NB_REQUESTS] =
     (req_handler)req_terminate_job,
     (req_handler)req_suspend_process,
     (req_handler)req_resume_process,
+    (req_handler)req_create_esync,
 };
 
 C_ASSERT( sizeof(abstime_t) == 8 );
@@ -2235,6 +2237,15 @@ C_ASSERT( FIELD_OFFSET(struct suspend_process_request, handle) == 12 );
 C_ASSERT( sizeof(struct suspend_process_request) == 16 );
 C_ASSERT( FIELD_OFFSET(struct resume_process_request, handle) == 12 );
 C_ASSERT( sizeof(struct resume_process_request) == 16 );
+C_ASSERT( FIELD_OFFSET(struct create_esync_request, access) == 12 );
+C_ASSERT( FIELD_OFFSET(struct create_esync_request, initval) == 16 );
+C_ASSERT( FIELD_OFFSET(struct create_esync_request, type) == 20 );
+C_ASSERT( FIELD_OFFSET(struct create_esync_request, max) == 24 );
+C_ASSERT( sizeof(struct create_esync_request) == 32 );
+C_ASSERT( FIELD_OFFSET(struct create_esync_reply, handle) == 8 );
+C_ASSERT( FIELD_OFFSET(struct create_esync_reply, type) == 12 );
+C_ASSERT( FIELD_OFFSET(struct create_esync_reply, shm_idx) == 16 );
+C_ASSERT( sizeof(struct create_esync_reply) == 24 );
 
 #endif  /* WANT_REQUEST_HANDLERS */
 

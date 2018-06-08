@@ -4382,6 +4382,22 @@ static void dump_resume_process_request( const struct resume_process_request *re
     fprintf( stderr, " handle=%04x", req->handle );
 }
 
+static void dump_create_esync_request( const struct create_esync_request *req )
+{
+    fprintf( stderr, " access=%08x", req->access );
+    fprintf( stderr, ", initval=%d", req->initval );
+    fprintf( stderr, ", type=%d", req->type );
+    fprintf( stderr, ", max=%d", req->max );
+    dump_varargs_object_attributes( ", objattr=", cur_size );
+}
+
+static void dump_create_esync_reply( const struct create_esync_reply *req )
+{
+    fprintf( stderr, " handle=%04x", req->handle );
+    fprintf( stderr, ", type=%d", req->type );
+    fprintf( stderr, ", shm_idx=%08x", req->shm_idx );
+}
+
 static const dump_func req_dumpers[REQ_NB_REQUESTS] = {
     (dump_func)dump_new_process_request,
     (dump_func)dump_exec_process_request,
@@ -4657,6 +4673,7 @@ static const dump_func req_dumpers[REQ_NB_REQUESTS] = {
     (dump_func)dump_terminate_job_request,
     (dump_func)dump_suspend_process_request,
     (dump_func)dump_resume_process_request,
+    (dump_func)dump_create_esync_request,
 };
 
 static const dump_func reply_dumpers[REQ_NB_REQUESTS] = {
@@ -4934,6 +4951,7 @@ static const dump_func reply_dumpers[REQ_NB_REQUESTS] = {
     NULL,
     NULL,
     NULL,
+    (dump_func)dump_create_esync_reply,
 };
 
 static const char * const req_names[REQ_NB_REQUESTS] = {
@@ -5211,6 +5229,7 @@ static const char * const req_names[REQ_NB_REQUESTS] = {
     "terminate_job",
     "suspend_process",
     "resume_process",
+    "create_esync",
 };
 
 static const struct
