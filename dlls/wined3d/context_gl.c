@@ -3940,6 +3940,12 @@ static void wined3d_context_gl_bind_shader_resources(struct wined3d_context_gl *
     if (!(shader = state->shader[shader_type]))
         return;
 
+    if (device->shader_backend->shader_load_sampler_handles)
+    {
+        device->shader_backend->shader_load_sampler_handles(device->shader_priv, context_gl, state, shader);
+        return;
+    }
+
     tex_unit_map = wined3d_context_gl_get_tex_unit_mapping(context_gl,
             &shader->reg_maps.shader_version, &base, &count);
 
