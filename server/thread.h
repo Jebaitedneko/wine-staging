@@ -90,6 +90,7 @@ struct thread
     struct list            kernel_object; /* list of kernel object pointers */
     data_size_t            desc_len;      /* thread description length in bytes */
     WCHAR                 *desc;          /* thread description string */
+    struct timeout_user   *exit_poll;     /* poll if the thread/process has exited already */
 };
 
 extern struct thread *current;
