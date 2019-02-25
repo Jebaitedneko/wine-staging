@@ -921,6 +921,8 @@ static void joy_polldev(LPDIRECTINPUTDEVICE8A iface)
             if (btn & 0x80)
             {
                 btn &= 0x7F;
+                btn = This->generic.button_map[btn];
+
                 inst_id = DIDFT_MAKEINSTANCE(btn) | DIDFT_PSHBUTTON;
                 This->generic.js.rgbButtons[btn] = value = ie.value ? 0x80 : 0x00;
             }
