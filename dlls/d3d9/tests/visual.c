@@ -21861,7 +21861,7 @@ static void do_test_indexed_vertex_blending(IDirect3DDevice9 *device, const char
     ok(SUCCEEDED(hr), "Failed to get device caps, hr %#x.\n", hr);
     if (caps.MaxVertexBlendMatrixIndex < 7 || caps.MaxVertexBlendMatrices < 4)
     {
-        todo_wine win_skip("(%s) Too few vertex blend matrices supported: MaxVertexBlendMatrices=%u, MaxVertexBlendMatrixIndex=%u.\n",
+        win_skip("(%s) Too few vertex blend matrices supported: MaxVertexBlendMatrices=%u, MaxVertexBlendMatrixIndex=%u.\n",
                 test_id_str, caps.MaxVertexBlendMatrices, caps.MaxVertexBlendMatrixIndex);
         return;
     }
@@ -22030,7 +22030,7 @@ static void test_indexed_vertex_blending(void)
         memset(&caps, 0, sizeof(caps));
         hr = IDirect3DDevice9_GetDeviceCaps(device, &caps);
         ok(SUCCEEDED(hr), "Failed to get device caps, hr %#x.\n", hr);
-        todo_wine ok(caps.MaxVertexBlendMatrixIndex == 255, "Expected 255 as maximum blend matrix index, got %u.\n",
+        ok(caps.MaxVertexBlendMatrixIndex == 255, "Expected 255 as maximum blend matrix index, got %u.\n",
                 caps.MaxVertexBlendMatrixIndex);
 
         do_test_indexed_vertex_blending(device,"IVB software");
@@ -22056,7 +22056,7 @@ static void test_indexed_vertex_blending(void)
         memset(&caps, 0, sizeof(caps));
         hr = IDirect3DDevice9_GetDeviceCaps(device, &caps);
         ok(SUCCEEDED(hr), "Failed to get device caps, hr %#x.\n", hr);
-        todo_wine ok(caps.MaxVertexBlendMatrixIndex == 255, "Expected 255 as maximum blend matrix index, got %u.\n",
+        ok(caps.MaxVertexBlendMatrixIndex == 255, "Expected 255 as maximum blend matrix index, got %u.\n",
                 caps.MaxVertexBlendMatrixIndex);
 
         hr = IDirect3DDevice9_SetSoftwareVertexProcessing(device, FALSE);
