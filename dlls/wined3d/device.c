@@ -4019,9 +4019,16 @@ void CDECL wined3d_device_apply_stateblock(struct wined3d_device *device,
 
 HRESULT CDECL wined3d_device_get_device_caps(const struct wined3d_device *device, struct wined3d_caps *caps)
 {
+    HRESULT hr;
+
     TRACE("device %p, caps %p.\n", device, caps);
 
-    return wined3d_get_device_caps(device->adapter, device->create_parms.device_type, caps);
+    if (FAILED(hr = wined3d_get_device_caps(device->adapter, device->create_parms.device_type, caps)))
+        return hr;
+
+    if (device->create_parms.flags & WINED3DCREATE_SOFTWARE_VERTEXPROCESSING)
+        caps->MaxVertexShaderConst = device->adapter->d3d_info.limits.vs_uniform_count_swvp;
+    return hr;
 }
 
 HRESULT CDECL wined3d_device_get_display_mode(const struct wined3d_device *device, UINT swapchain_idx,
