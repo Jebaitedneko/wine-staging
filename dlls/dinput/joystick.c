@@ -1056,6 +1056,7 @@ HRESULT setup_dinput_options(JoystickGenericImpl *This, const int *default_axis_
     int tokens = 0;
     int axis = 0;
     int pov = 0;
+    int button;
 
     get_app_key(&hkey, &appkey);
 
@@ -1065,6 +1066,34 @@ HRESULT setup_dinput_options(JoystickGenericImpl *This, const int *default_axis_
     {
         This->deadzone = atoi(buffer);
         TRACE("setting default deadzone to: \"%s\" %d\n", buffer, This->deadzone);
+    }
+
+    for (button = 0; button < MAX_MAP_BUTTONS; button++)
+        This->button_map[button] = button;
+
+    if (!get_config_key(hkey, appkey, "ButtonMap", buffer, sizeof(buffer)))
+    {
+        static const char *delim = ",";
+        int button = 0;
+        char *token;
+
+        TRACE("ButtonMap = \"%s\"\n", buffer);
+        for (token = strtok(buffer, delim);
+             token != NULL && button < MAX_MAP_BUTTONS;
+             token = strtok(NULL, delim), button++)
+        {
+            char *s;
+            int value = strtol(token, &s, 10);
+            if (value < 0 || *s != '\0')
+            {
+                ERR("invalid button number: \"%s\"", token);
+            }
+            else
+            {
+                TRACE("mapping physical button %d to DInput button %d", value, button);
+                This->button_map[value] = button;
+            }
+        }
     }
 
     This->axis_map = HeapAlloc(GetProcessHeap(), 0, This->device_axis_count * sizeof(int));
