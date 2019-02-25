@@ -24848,7 +24848,6 @@ static void test_mvp_software_vertex_shaders(void)
     hr = IDirect3DDevice9_CreateVertexShader(device, reladdr_shader_code, &reladdr_shader);
     ok(SUCCEEDED(hr), "Got unexpected hr %#x.\n", hr);
     hr = IDirect3DDevice9_CreateVertexShader(device, pure_sw_shader_code, &pure_sw_shader);
-    todo_wine
     ok(SUCCEEDED(hr), "Got unexpected hr %#x.\n", hr);
     hr = IDirect3DDevice9_CreateVertexDeclaration(device, decl_elements, &vertex_declaration);
     ok(SUCCEEDED(hr), "Got unexpected hr %#x.\n", hr);
@@ -24886,7 +24885,7 @@ static void test_mvp_software_vertex_shaders(void)
 
     expected_color = 0x00ff0000; /* Color from vertex data and not from the shader. */
     color = getPixelColor(device, 5, 5);
-    ok(color == expected_color, "Expected color 0x%08x, got 0x%08x (sw shader in hw mode, second attempt).\n",
+    todo_wine ok(color == expected_color, "Expected color 0x%08x, got 0x%08x (sw shader in hw mode, second attempt).\n",
             expected_color, color);
 
     hr = IDirect3DDevice9_Present(device, NULL, NULL, NULL, NULL);
@@ -24905,7 +24904,6 @@ static void test_mvp_software_vertex_shaders(void)
 
     expected_color = 0x00ffffff;
     color = getPixelColor(device, 5, 5);
-    todo_wine
     ok(color == expected_color, "Expected color 0x%08x, got 0x%08x (sw shader in sw mode).\n",
             expected_color, color);
 
@@ -24955,7 +24953,6 @@ static void test_mvp_software_vertex_shaders(void)
 
     expected_color = 0x0000ffff; /* c[256] is c_color for SW shader. */
     color = getPixelColor(device, 5, 5);
-    todo_wine
     ok(color == expected_color, "Expected color 0x%08x, got 0x%08x (shader in sw mode).\n",
             expected_color, color);
 

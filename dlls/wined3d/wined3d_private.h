@@ -3955,6 +3955,13 @@ static inline void wined3d_device_bo_map_unlock(struct wined3d_device *device)
     LeaveCriticalSection(&device->bo_map_lock);
 }
 
+static inline BOOL wined3d_device_is_swvp_mode(const struct wined3d_device *device)
+{
+    return (device->create_parms.flags & WINED3DCREATE_SOFTWARE_VERTEXPROCESSING)
+            || ((device->create_parms.flags & WINED3DCREATE_MIXED_VERTEXPROCESSING)
+            && device->softwareVertexProcessing);
+}
+
 static inline unsigned int wined3d_device_get_vs_uniform_count(const struct wined3d_device *device)
 {
     const struct wined3d_d3d_info *d3d_info = &device->adapter->d3d_info;
