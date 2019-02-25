@@ -24895,7 +24895,6 @@ static void test_mvp_software_vertex_shaders(void)
     hr = IDirect3DDevice9_SetVertexShaderConstantF(device, 0, c_index, 1);
     ok(SUCCEEDED(hr), "Got unexpected hr %#x.\n", hr);
     hr = IDirect3DDevice9_SetVertexShaderConstantF(device, (unsigned int)c_index[0], c_color, 1);
-    todo_wine
     ok(SUCCEEDED(hr), "Got unexpected hr %#x.\n", hr);
 
     hr = IDirect3DDevice9_BeginScene(device);

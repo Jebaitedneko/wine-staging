@@ -3619,7 +3619,7 @@ void CDECL wined3d_device_apply_stateblock(struct wined3d_device *device,
     const struct wined3d_stateblock_state *state = &stateblock->stateblock_state;
     const struct wined3d_saved_states *changed = &stateblock->changed;
     const unsigned int word_bit_count = sizeof(DWORD) * CHAR_BIT;
-    unsigned int i, j, start, idx;
+    unsigned int i, j, start, idx, vs_uniform_count;
     struct wined3d_range range;
     uint32_t map;
 
@@ -3630,9 +3630,11 @@ void CDECL wined3d_device_apply_stateblock(struct wined3d_device *device,
     if (changed->pixelShader)
         wined3d_device_set_pixel_shader(device, state->ps);
 
+    vs_uniform_count = wined3d_device_get_vs_uniform_count(device);
+
     for (start = 0; ; start = range.offset + range.size)
     {
-        if (!wined3d_bitmap_get_range(changed->vs_consts_f, WINED3D_MAX_VS_CONSTS_F, start, &range))
+        if (!wined3d_bitmap_get_range(changed->vs_consts_f, vs_uniform_count, start, &range))
             break;
 
         wined3d_device_set_vs_consts_f(device, range.offset, range.size, &state->vs_consts_f[range.offset]);
