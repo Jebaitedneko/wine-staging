@@ -181,6 +181,7 @@ struct wined3d_d3d_limits
 {
     unsigned int vs_version, hs_version, ds_version, gs_version, ps_version, cs_version;
     DWORD vs_uniform_count;
+    DWORD vs_uniform_count_swvp;
     DWORD ps_uniform_count;
     unsigned int varying_count;
     unsigned int ffp_textures;
