@@ -4175,6 +4175,7 @@ void CDECL wined3d_device_apply_stateblock(struct wined3d_device *device,
 
 HRESULT CDECL wined3d_device_get_device_caps(const struct wined3d_device *device, struct wined3d_caps *caps)
 {
+    struct wined3d_vertex_caps vertex_caps;
     HRESULT hr;
 
     TRACE("device %p, caps %p.\n", device, caps);
@@ -4184,6 +4185,11 @@ HRESULT CDECL wined3d_device_get_device_caps(const struct wined3d_device *device
 
     if (device->create_parms.flags & WINED3DCREATE_SOFTWARE_VERTEXPROCESSING)
         caps->MaxVertexShaderConst = device->adapter->d3d_info.limits.vs_uniform_count_swvp;
+
+    device->adapter->vertex_pipe->vp_get_caps(device->adapter, &vertex_caps);
+    caps->MaxVertexBlendMatrixIndex = vertex_caps.max_vertex_blend_matrix_index;
+    if (!wined3d_device_is_swvp_mode(device))
+        caps->MaxVertexBlendMatrixIndex = min(caps->MaxVertexBlendMatrixIndex, 8);
     return hr;
 }
 
