@@ -4465,6 +4465,14 @@ void CDECL wined3d_device_set_software_vertex_processing(struct wined3d_device *
         warned = TRUE;
     }
 
+    wined3d_cs_finish(device->cs, WINED3D_CS_QUEUE_DEFAULT);
+    if (!device->softwareVertexProcessing != !software)
+    {
+        unsigned int i;
+
+        for (i = 0; i < device->context_count; ++i)
+            device->contexts[i]->constant_update_mask |= WINED3D_SHADER_CONST_VS_F;
+    }
     device->softwareVertexProcessing = software;
 }
 

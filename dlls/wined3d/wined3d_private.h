@@ -3845,6 +3845,13 @@ HRESULT wined3d_device_set_implicit_swapchain(struct wined3d_device *device,
         struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;
 void wined3d_device_uninit_3d(struct wined3d_device *device) DECLSPEC_HIDDEN;
 
+static inline BOOL wined3d_device_is_swvp_mode(const struct wined3d_device *device)
+{
+    return (device->create_parms.flags & WINED3DCREATE_SOFTWARE_VERTEXPROCESSING)
+            || ((device->create_parms.flags & WINED3DCREATE_MIXED_VERTEXPROCESSING)
+            && device->softwareVertexProcessing);
+}
+
 static inline unsigned int wined3d_device_get_vs_uniform_count(const struct wined3d_device *device)
 {
     const struct wined3d_d3d_info *d3d_info = &device->adapter->d3d_info;

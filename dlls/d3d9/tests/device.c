@@ -7425,15 +7425,11 @@ float4 main(const float4 color : COLOR) : SV_TARGET
 
     vs = NULL;
     hr = IDirect3DDevice9_CreateVertexShader(device, vs_1_256, &vs);
-    todo_wine
     ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
-    if (vs)
-        IDirect3DVertexShader9_Release(vs);
+    IDirect3DVertexShader9_Release(vs);
     hr = IDirect3DDevice9_CreateVertexShader(device, vs_3_256, &vs);
-    todo_wine
     ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
-    if (vs)
-        IDirect3DVertexShader9_Release(vs);
+    IDirect3DVertexShader9_Release(vs);
 
     refcount = IDirect3DDevice9_Release(device);
     ok(!refcount, "Device has %u references left.\n", refcount);
@@ -7450,20 +7446,16 @@ float4 main(const float4 color : COLOR) : SV_TARGET
     ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
 
     hr = IDirect3DDevice9_CreateVertexShader(device, vs_1_256, &vs);
-    todo_wine
     ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
     hr = IDirect3DDevice9_SetVertexShader(device, vs);
     ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
-    if (vs)
-        IDirect3DVertexShader9_Release(vs);
+    IDirect3DVertexShader9_Release(vs);
 
     hr = IDirect3DDevice9_CreateVertexShader(device, vs_3_256, &vs);
-    todo_wine
     ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
     hr = IDirect3DDevice9_SetVertexShader(device, vs);
     ok(hr == D3D_OK, "Got unexpected hr %#x.\n", hr);
-    if (vs)
-        IDirect3DVertexShader9_Release(vs);
+    IDirect3DVertexShader9_Release(vs);
 
 cleanup:
     refcount = IDirect3DDevice9_Release(device);
