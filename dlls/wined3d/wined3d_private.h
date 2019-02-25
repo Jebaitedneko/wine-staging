@@ -3684,7 +3684,7 @@ struct wined3d_state
     struct wined3d_shader_resource_view *shader_resource_view[WINED3D_SHADER_TYPE_COUNT][MAX_SHADER_RESOURCE_VIEWS];
     struct wined3d_unordered_access_view *unordered_access_view[WINED3D_PIPELINE_COUNT][MAX_UNORDERED_ACCESS_VIEWS];
 
-    struct wined3d_vec4 vs_consts_f[WINED3D_MAX_VS_CONSTS_F];
+    struct wined3d_vec4 vs_consts_f[WINED3D_MAX_VS_CONSTS_F_SWVP];
     struct wined3d_ivec4 vs_consts_i[WINED3D_MAX_CONSTS_I];
     BOOL vs_consts_b[WINED3D_MAX_CONSTS_B];
 
@@ -3844,6 +3844,15 @@ void device_invalidate_state(const struct wined3d_device *device, DWORD state) D
 HRESULT wined3d_device_set_implicit_swapchain(struct wined3d_device *device,
         struct wined3d_swapchain *swapchain) DECLSPEC_HIDDEN;
 void wined3d_device_uninit_3d(struct wined3d_device *device) DECLSPEC_HIDDEN;
+
+static inline unsigned int wined3d_device_get_vs_uniform_count(const struct wined3d_device *device)
+{
+    const struct wined3d_d3d_info *d3d_info = &device->adapter->d3d_info;
+
+    return device->create_parms.flags
+            & (WINED3DCREATE_SOFTWARE_VERTEXPROCESSING | WINED3DCREATE_MIXED_VERTEXPROCESSING)
+            ? d3d_info->limits.vs_uniform_count_swvp : d3d_info->limits.vs_uniform_count;
+}
 
 struct wined3d_device_no3d
 {
@@ -4575,7 +4584,7 @@ struct wined3d_vertex_declaration
 
 struct wined3d_saved_states
 {
-    uint32_t vs_consts_f[WINED3D_BITMAP_SIZE(WINED3D_MAX_VS_CONSTS_F)];
+    uint32_t vs_consts_f[WINED3D_BITMAP_SIZE(WINED3D_MAX_VS_CONSTS_F_SWVP)];
     WORD vertexShaderConstantsI;                /* WINED3D_MAX_CONSTS_I, 16 */
     WORD vertexShaderConstantsB;                /* WINED3D_MAX_CONSTS_B, 16 */
     uint32_t ps_consts_f[WINED3D_BITMAP_SIZE(WINED3D_MAX_PS_CONSTS_F)];
