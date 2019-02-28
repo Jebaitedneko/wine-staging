@@ -336,6 +336,76 @@ BOOL is_xinput_device(const DIDEVCAPS *devcaps, WORD vid, WORD pid)
     return (devcaps->dwAxes == 6 && devcaps->dwButtons >= 14);
 }
 
+static void remap_init(JoystickGenericImpl *This, int obj, ObjProps *remap_props)
+{
+    /* Configure as if nothing changed so the helper functions can only change
+     * what they need, thus reducing code duplication. */
+    remap_props->lDevMin = remap_props->lMin = This->props[obj].lMin;
+    remap_props->lDevMax = remap_props->lMax = This->props[obj].lMax;
+
+    remap_props->lDeadZone = This->props[obj].lDeadZone;
+    remap_props->lSaturation = This->props[obj].lSaturation;
+}
+
+static void remap_apply(JoystickGenericImpl *This, int obj, ObjProps *remap_props)
+{
+    /* Many games poll the joystick immediately after setting the range
+     * for calibration purposes, so the old values need to be remapped
+     * to the new range before it does so */
+    switch (This->base.data_format.wine_df->rgodf[obj].dwOfs){
+    case DIJOFS_X        : This->js.lX  = joystick_map_axis(remap_props, This->js.lX); break;
+    case DIJOFS_Y        : This->js.lY  = joystick_map_axis(remap_props, This->js.lY); break;
+    case DIJOFS_Z        : This->js.lZ  = joystick_map_axis(remap_props, This->js.lZ); break;
+    case DIJOFS_RX       : This->js.lRx = joystick_map_axis(remap_props, This->js.lRx); break;
+    case DIJOFS_RY       : This->js.lRy = joystick_map_axis(remap_props, This->js.lRy); break;
+    case DIJOFS_RZ       : This->js.lRz = joystick_map_axis(remap_props, This->js.lRz); break;
+    case DIJOFS_SLIDER(0): This->js.rglSlider[0] = joystick_map_axis(remap_props, This->js.rglSlider[0]); break;
+    case DIJOFS_SLIDER(1): This->js.rglSlider[1] = joystick_map_axis(remap_props, This->js.rglSlider[1]); break;
+    default: break;
+    }
+}
+
+static void remap_range(JoystickGenericImpl *This, int obj, LPCDIPROPRANGE pr)
+{
+    ObjProps remap_props;
+    remap_init(This, obj, &remap_props);
+
+    remap_props.lMin = pr->lMin;
+    remap_props.lMax = pr->lMax;
+
+    remap_apply(This, obj, &remap_props);
+
+    /* Store new values */
+    This->props[obj].lMin = pr->lMin;
+    This->props[obj].lMax = pr->lMax;
+}
+
+static void remap_deadzone(JoystickGenericImpl *This, int obj, LPCDIPROPDWORD pd)
+{
+    ObjProps remap_props;
+    remap_init(This, obj, &remap_props);
+
+    remap_props.lDeadZone = pd->dwData;
+
+    remap_apply(This, obj, &remap_props);
+
+    /* Store new value */
+    This->props[obj].lDeadZone = pd->dwData;
+}
+
+static void remap_saturation(JoystickGenericImpl *This, int obj, LPCDIPROPDWORD pd)
+{
+    ObjProps remap_props;
+    remap_init(This, obj, &remap_props);
+
+    remap_props.lSaturation = pd->dwData;
+
+    remap_apply(This, obj, &remap_props);
+
+    /* Store new value */
+    This->props[obj].lSaturation = pd->dwData;
+}
+
 /******************************************************************************
   *     SetProperty : change input device properties
   */
@@ -343,7 +413,6 @@ HRESULT WINAPI JoystickWGenericImpl_SetProperty(LPDIRECTINPUTDEVICE8W iface, REF
 {
     JoystickGenericImpl *This = impl_from_IDirectInputDevice8W(iface);
     DWORD i;
-    ObjProps remap_props;
 
     TRACE("(%p,%s,%p)\n",This,debugstr_guid(rguid),ph);
 
@@ -360,69 +429,15 @@ HRESULT WINAPI JoystickWGenericImpl_SetProperty(LPDIRECTINPUTDEVICE8W iface, REF
         case (DWORD_PTR)DIPROP_RANGE: {
             LPCDIPROPRANGE pr = (LPCDIPROPRANGE)ph;
             if (ph->dwHow == DIPH_DEVICE) {
-
-                /* Many games poll the joystick immediately after setting the range
-                 * for calibration purposes, so the old values need to be remapped
-                 * to the new range before it does so */
-
                 TRACE("proprange(%d,%d) all\n", pr->lMin, pr->lMax);
-                for (i = 0; i < This->base.data_format.wine_df->dwNumObjs; i++) {
-
-                    remap_props.lDevMin = This->props[i].lMin;
-                    remap_props.lDevMax = This->props[i].lMax;
-
-                    remap_props.lDeadZone = This->props[i].lDeadZone;
-                    remap_props.lSaturation = This->props[i].lSaturation;
-
-                    remap_props.lMin = pr->lMin;
-                    remap_props.lMax = pr->lMax;
-
-                    switch (This->base.data_format.wine_df->rgodf[i].dwOfs) {
-                    case DIJOFS_X        : This->js.lX  = joystick_map_axis(&remap_props, This->js.lX); break;
-                    case DIJOFS_Y        : This->js.lY  = joystick_map_axis(&remap_props, This->js.lY); break;
-                    case DIJOFS_Z        : This->js.lZ  = joystick_map_axis(&remap_props, This->js.lZ); break;
-                    case DIJOFS_RX       : This->js.lRx = joystick_map_axis(&remap_props, This->js.lRx); break;
-                    case DIJOFS_RY       : This->js.lRy = joystick_map_axis(&remap_props, This->js.lRy); break;
-                    case DIJOFS_RZ       : This->js.lRz = joystick_map_axis(&remap_props, This->js.lRz); break;
-                    case DIJOFS_SLIDER(0): This->js.rglSlider[0] = joystick_map_axis(&remap_props, This->js.rglSlider[0]); break;
-                    case DIJOFS_SLIDER(1): This->js.rglSlider[1] = joystick_map_axis(&remap_props, This->js.rglSlider[1]); break;
-	            default: break;
-                    }
-
-                    This->props[i].lMin = pr->lMin;
-                    This->props[i].lMax = pr->lMax;
-                }
+                for (i = 0; i < This->base.data_format.wine_df->dwNumObjs; i++)
+                    remap_range(This, i, pr);
             } else {
                 int obj = find_property(&This->base.data_format, ph);
 
                 TRACE("proprange(%d,%d) obj=%d\n", pr->lMin, pr->lMax, obj);
-                if (obj >= 0) {
-
-                    remap_props.lDevMin = This->props[obj].lMin;
-                    remap_props.lDevMax = This->props[obj].lMax;
-
-                    remap_props.lDeadZone = This->props[obj].lDeadZone;
-                    remap_props.lSaturation = This->props[obj].lSaturation;
-
-                    remap_props.lMin = pr->lMin;
-                    remap_props.lMax = pr->lMax;
-
-                    switch (This->base.data_format.wine_df->rgodf[obj].dwOfs) {
-                    case DIJOFS_X        : This->js.lX  = joystick_map_axis(&remap_props, This->js.lX); break;
-                    case DIJOFS_Y        : This->js.lY  = joystick_map_axis(&remap_props, This->js.lY); break;
-                    case DIJOFS_Z        : This->js.lZ  = joystick_map_axis(&remap_props, This->js.lZ); break;
-                    case DIJOFS_RX       : This->js.lRx = joystick_map_axis(&remap_props, This->js.lRx); break;
-                    case DIJOFS_RY       : This->js.lRy = joystick_map_axis(&remap_props, This->js.lRy); break;
-                    case DIJOFS_RZ       : This->js.lRz = joystick_map_axis(&remap_props, This->js.lRz); break;
-                    case DIJOFS_SLIDER(0): This->js.rglSlider[0] = joystick_map_axis(&remap_props, This->js.rglSlider[0]); break;
-                    case DIJOFS_SLIDER(1): This->js.rglSlider[1] = joystick_map_axis(&remap_props, This->js.rglSlider[1]); break;
-		    default: break;
-                    }
-
-                    This->props[obj].lMin = pr->lMin;
-                    This->props[obj].lMax = pr->lMax;
-                    return DI_OK;
-                }
+                if (obj >= 0)
+                    remap_range(This, obj, pr);
             }
             break;
         }
@@ -431,15 +446,13 @@ HRESULT WINAPI JoystickWGenericImpl_SetProperty(LPDIRECTINPUTDEVICE8W iface, REF
             if (ph->dwHow == DIPH_DEVICE) {
                 TRACE("deadzone(%d) all\n", pd->dwData);
                 for (i = 0; i < This->base.data_format.wine_df->dwNumObjs; i++)
-                    This->props[i].lDeadZone  = pd->dwData;
+                    remap_deadzone(This, i, pd);
             } else {
                 int obj = find_property(&This->base.data_format, ph);
 
                 TRACE("deadzone(%d) obj=%d\n", pd->dwData, obj);
-                if (obj >= 0) {
-                    This->props[obj].lDeadZone  = pd->dwData;
-                    return DI_OK;
-                }
+                if (obj >= 0)
+                    remap_deadzone(This, obj, pd);
             }
             break;
         }
@@ -448,15 +461,13 @@ HRESULT WINAPI JoystickWGenericImpl_SetProperty(LPDIRECTINPUTDEVICE8W iface, REF
             if (ph->dwHow == DIPH_DEVICE) {
                 TRACE("saturation(%d) all\n", pd->dwData);
                 for (i = 0; i < This->base.data_format.wine_df->dwNumObjs; i++)
-                    This->props[i].lSaturation = pd->dwData;
+                    remap_saturation(This, i, pd);
             } else {
                 int obj = find_property(&This->base.data_format, ph);
 
                 TRACE("saturation(%d) obj=%d\n", pd->dwData, obj);
-                if (obj >= 0) {
-                    This->props[obj].lSaturation = pd->dwData;
-                    return DI_OK;
-                }
+                if (obj >= 0)
+                    remap_saturation(This, obj, pd);
             }
             break;
         }
