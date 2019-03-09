@@ -226,6 +226,39 @@ static cl_int (*pclSetEventCallback)(cl_event event, cl_int command_exec_callbac
 static cl_int (*pclSetMemObjectDestructorCallback)(cl_mem memobj, void (*pfn_notify)(cl_mem, void*), void *user_data);
 static cl_int (*pclSetUserEventStatus)(cl_event event, cl_int execution_status);
 
+/* OpenCL 1.2 functions */
+static cl_int (*pclCompileProgram)(cl_program program, cl_uint num_devices, const cl_device_id * device_list, const char * options,
+                                   cl_uint num_input_headers, const cl_program * input_headers, const char ** header_include_names,
+                                   void (*pfn_notify)(cl_program program, void * user_data),
+                                   void * user_data);
+static cl_mem (*pclCreateImage)(cl_context context, cl_mem_flags flags,
+                                const cl_image_format * image_format, const cl_image_desc * image_desc, void * host_ptr, cl_int * errcode_ret);
+static cl_program (*pclCreateProgramWithBuiltInKernels)(cl_context context, cl_uint num_devices, const cl_device_id * device_list,
+                                                        const char * kernel_names, cl_int * errcode_ret);
+static cl_int (*pclCreateSubDevices)(cl_device_id in_device, const cl_device_partition_property * properties, cl_uint num_entries,
+                                     cl_device_id * out_devices, cl_uint * num_devices);
+static cl_int (*pclEnqueueBarrierWithWaitList)(cl_command_queue command_queue, cl_uint num_events_in_wait_list,
+                                               const cl_event * event_wait_list, cl_event * event);
+static cl_int (*pclEnqueueFillBuffer)(cl_command_queue command_queue, cl_mem buffer, const void * pattern, size_t pattern_size, size_t offset, size_t cb,
+                                      cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event);
+static cl_int (*pclEnqueueFillImage)(cl_command_queue command_queue, cl_mem image, const void * fill_color,
+                                     const size_t * origin, const size_t * region,
+                                     cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event);
+static cl_int (*pclEnqueueMarkerWithWaitList)(cl_command_queue command_queue, cl_uint num_events_in_wait_list,
+                                              const cl_event * event_wait_list, cl_event * event);
+static cl_int (*pclEnqueueMigrateMemObjects)(cl_command_queue command_queue, cl_uint num_mem_objects, const cl_mem * mem_objects, cl_mem_migration_flags flags,
+                                             cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event);
+static void * (*pclGetExtensionFunctionAddressForPlatform)(cl_platform_id platform, const char * function_name);
+static cl_int (*pclGetKernelArgInfo)(cl_kernel kernel, cl_uint arg_indx, cl_kernel_arg_info param_name,
+                                     size_t param_value_size, void * param_value, size_t * param_value_size_ret);
+static cl_program (*pclLinkProgram)(cl_context context, cl_uint num_devices, const cl_device_id * device_list, const char * options,
+                                    cl_uint num_input_programs, const cl_program * input_programs,
+                                    void (* pfn_notify)(cl_program program, void * user_data),
+                                    void * user_data, cl_int * errcode_ret);
+static cl_int (*pclReleaseDevice)(cl_device_id device);
+static cl_int (*pclRetainDevice)(cl_device_id device);
+static cl_int (*pclUnloadPlatformCompiler)(cl_platform_id platform);
+
 
 static BOOL init_opencl(void);
 static BOOL load_opencl_func(void);
@@ -400,6 +433,26 @@ static BOOL load_opencl_func(void)
     LOAD_FUNCPTR(clSetUserEventStatus);
 #endif
 
+    /* OpenCL 1.2 functions */
+#ifdef CL_VERSION_1_2
+    LOAD_FUNCPTR(clCompileProgram);
+    /*LOAD_FUNCPTR(clCreateFromGLTexture);*/
+    LOAD_FUNCPTR(clCreateImage);
+    LOAD_FUNCPTR(clCreateProgramWithBuiltInKernels);
+    LOAD_FUNCPTR(clCreateSubDevices);
+    LOAD_FUNCPTR(clEnqueueBarrierWithWaitList);
+    LOAD_FUNCPTR(clEnqueueFillBuffer);
+    LOAD_FUNCPTR(clEnqueueFillImage);
+    LOAD_FUNCPTR(clEnqueueMarkerWithWaitList);
+    LOAD_FUNCPTR(clEnqueueMigrateMemObjects);
+    LOAD_FUNCPTR(clGetExtensionFunctionAddressForPlatform);
+    LOAD_FUNCPTR(clGetKernelArgInfo);
+    LOAD_FUNCPTR(clLinkProgram);
+    LOAD_FUNCPTR(clReleaseDevice);
+    LOAD_FUNCPTR(clRetainDevice);
+    LOAD_FUNCPTR(clUnloadPlatformCompiler);
+#endif
+
 #undef LOAD_FUNCPTR
 
     return TRUE;
@@ -512,6 +565,38 @@ cl_int WINAPI wine_clGetDeviceInfo(cl_device_id device, cl_device_info param_nam
     }
 
     TRACE("(%p, 0x%x, %ld, %p, %p)=%d\n",device, param_name, param_value_size, param_value, param_value_size_ret, ret);
+    return ret;
+}
+
+cl_int WINAPI wine_clCreateSubDevices(cl_device_id in_device, const cl_device_partition_property * properties, cl_uint num_entries,
+                                      cl_device_id * out_devices, cl_uint * num_devices)
+{
+    cl_int ret;
+    TRACE("(%p, %p, %d, %p, %p)\n", in_device, properties, num_entries, out_devices, num_devices);
+    if (!pclCreateSubDevices) return CL_INVALID_VALUE;
+    ret = pclCreateSubDevices(in_device, properties, num_entries, out_devices, num_devices);
+    TRACE("(%p, %p, %d, %p, %p)=%d\n", in_device, properties, num_entries, out_devices, num_devices, ret);
+    return ret;
+}
+
+cl_int WINAPI wine_clRetainDevice(cl_device_id device)
+{
+    cl_int ret;
+    TRACE("(%p)\n", device);
+    if (!pclRetainDevice) return CL_INVALID_DEVICE;
+    ret = pclRetainDevice(device);
+    TRACE("(%p)=%d\n", device, ret);
+    return ret;
+
+}
+
+cl_int WINAPI wine_clReleaseDevice(cl_device_id device)
+{
+    cl_int ret;
+    TRACE("(%p)\n", device);
+    if (!pclReleaseDevice) return CL_INVALID_DEVICE;
+    ret = pclReleaseDevice(device);
+    TRACE("(%p)=%d\n", device, ret);
     return ret;
 }
 
@@ -701,6 +786,20 @@ cl_mem WINAPI wine_clCreateSubBuffer(cl_mem buffer, cl_mem_flags flags,
         return NULL;
     }
     ret = pclCreateSubBuffer(buffer, flags, buffer_create_type, buffer_create_info, errcode_ret);
+    return ret;
+}
+
+cl_mem WINAPI wine_clCreateImage(cl_context context, cl_mem_flags flags,
+                                 const cl_image_format * image_format, const cl_image_desc * image_desc, void * host_ptr, cl_int * errcode_ret)
+{
+    cl_mem ret;
+    TRACE("\n");
+    if (!pclCreateImage)
+    {
+        *errcode_ret = CL_INVALID_VALUE;
+        return NULL;
+    }
+    ret = pclCreateImage(context, flags, image_format, image_desc, host_ptr, errcode_ret);
     return ret;
 }
 
@@ -900,6 +999,20 @@ cl_program WINAPI wine_clCreateProgramWithBinary(cl_context context, cl_uint num
     return ret;
 }
 
+cl_program WINAPI wine_clCreateProgramWithBuiltInKernels(cl_context context, cl_uint num_devices, const cl_device_id * device_list,
+                                                         const char * kernel_names, cl_int * errcode_ret)
+{
+    cl_program ret;
+    TRACE("\n");
+    if (!pclCreateProgramWithBuiltInKernels)
+    {
+        *errcode_ret = CL_INVALID_VALUE;
+        return NULL;
+    }
+    ret = pclCreateProgramWithBuiltInKernels(context, num_devices, device_list, kernel_names, errcode_ret);
+    return ret;
+}
+
 cl_int WINAPI wine_clRetainProgram(cl_program program)
 {
     cl_int ret;
@@ -958,12 +1071,76 @@ cl_int WINAPI wine_clBuildProgram(cl_program program, cl_uint num_devices, const
     return ret;
 }
 
+cl_int WINAPI wine_clCompileProgram(cl_program program, cl_uint num_devices, const cl_device_id * device_list, const char * options,
+                                    cl_uint num_input_headers, const cl_program * input_headers, const char ** header_include_names,
+                                    void WINAPI (*pfn_notify)(cl_program program, void * user_data),
+                                    void * user_data)
+{
+    cl_int ret;
+    TRACE("\n");
+    if (!pclCompileProgram) return CL_INVALID_VALUE;
+    if(pfn_notify)
+    {
+        /* When pfn_notify is provided, clCompileProgram is asynchronous */
+        PROGRAM_CALLBACK *pcb;
+        pcb = HeapAlloc(GetProcessHeap(), 0, sizeof(PROGRAM_CALLBACK));
+        pcb->pfn_notify = pfn_notify;
+        pcb->user_data = user_data;
+        ret = pclCompileProgram(program, num_devices, device_list, options, num_input_headers, input_headers, header_include_names, program_fn_notify, user_data);
+    }
+    else
+    {
+        /* When pfn_notify is NULL, clCompileProgram is synchronous */
+        ret = pclCompileProgram(program, num_devices, device_list, options, num_input_headers, input_headers, header_include_names, NULL, user_data);
+    }
+    return ret;
+}
+
+cl_program WINAPI wine_clLinkProgram(cl_context context, cl_uint num_devices, const cl_device_id * device_list, const char * options,
+                                     cl_uint num_input_programs, const cl_program * input_programs,
+                                     void WINAPI (* pfn_notify)(cl_program program, void * user_data),
+                                     void * user_data, cl_int * errcode_ret)
+{
+    cl_program ret;
+    TRACE("\n");
+    if (!pclLinkProgram)
+    {
+        *errcode_ret = CL_INVALID_VALUE;
+        return NULL;
+    }
+    if(pfn_notify)
+    {
+        /* When pfn_notify is provided, clLinkProgram is asynchronous */
+        PROGRAM_CALLBACK *pcb;
+        pcb = HeapAlloc(GetProcessHeap(), 0, sizeof(PROGRAM_CALLBACK));
+        pcb->pfn_notify = pfn_notify;
+        pcb->user_data = user_data;
+        ret = pclLinkProgram(context, num_devices, device_list, options, num_input_programs, input_programs, program_fn_notify, user_data, errcode_ret);
+    }
+    else
+    {
+        /* When pfn_notify is NULL, clLinkProgram is synchronous */
+        ret = pclLinkProgram(context, num_devices, device_list, options, num_input_programs, input_programs, NULL, user_data, errcode_ret);
+    }
+    return ret;
+}
+
 cl_int WINAPI wine_clUnloadCompiler(void)
 {
     cl_int ret;
     TRACE("()\n");
     if (!pclUnloadCompiler) return CL_SUCCESS;
     ret = pclUnloadCompiler();
+    TRACE("()=%d\n", ret);
+    return ret;
+}
+
+cl_int WINAPI wine_clUnloadPlatformCompiler(cl_platform_id platform)
+{
+    cl_int ret;
+    TRACE("()\n");
+    if (!pclUnloadPlatformCompiler) return CL_SUCCESS;
+    ret = pclUnloadPlatformCompiler(platform);
     TRACE("()=%d\n", ret);
     return ret;
 }
@@ -1040,6 +1217,16 @@ cl_int WINAPI wine_clSetKernelArg(cl_kernel kernel, cl_uint arg_index, size_t ar
     TRACE("\n");
     if (!pclSetKernelArg) return CL_INVALID_KERNEL;
     ret = pclSetKernelArg(kernel, arg_index, arg_size, arg_value);
+    return ret;
+}
+
+cl_int WINAPI wine_clGetKernelArgInfo(cl_kernel kernel, cl_uint arg_indx, cl_kernel_arg_info param_name,
+                                      size_t param_value_size, void * param_value, size_t * param_value_size_ret)
+{
+    cl_int ret;
+    TRACE("\n");
+    if (!pclGetKernelArgInfo) return CL_INVALID_VALUE;
+    ret = pclGetKernelArgInfo(kernel, arg_indx, param_name, param_value_size, param_value, param_value_size_ret);
     return ret;
 }
 
@@ -1262,6 +1449,16 @@ cl_int WINAPI wine_clEnqueueWriteBufferRect( cl_command_queue command_queue, cl_
     return ret;
 }
 
+cl_int WINAPI wine_clEnqueueFillBuffer(cl_command_queue command_queue, cl_mem buffer, const void * pattern, size_t pattern_size, size_t offset, size_t cb,
+                                       cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event)
+{
+    cl_int ret;
+    TRACE("\n");
+    if (!pclEnqueueFillBuffer) return CL_INVALID_VALUE;
+    ret = pclEnqueueFillBuffer(command_queue, buffer, pattern, pattern_size, offset, cb, num_events_in_wait_list, event_wait_list, event);
+    return ret;
+}
+
 cl_int WINAPI wine_clEnqueueCopyBuffer(cl_command_queue command_queue, cl_mem src_buffer, cl_mem dst_buffer,
                                        size_t src_offset, size_t dst_offset, size_t cb,
                                        cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event)
@@ -1310,6 +1507,17 @@ cl_int WINAPI wine_clEnqueueWriteImage(cl_command_queue command_queue, cl_mem im
     TRACE("\n");
     if (!pclEnqueueWriteImage) return CL_INVALID_VALUE;
     ret = pclEnqueueWriteImage(command_queue, image, blocking_write, origin, region, input_row_pitch, input_slice_pitch, ptr, num_events_in_wait_list, event_wait_list, event);
+    return ret;
+}
+
+cl_int WINAPI wine_clEnqueueFillImage(cl_command_queue command_queue, cl_mem image, const void * fill_color,
+                                      const size_t * origin, const size_t * region,
+                                      cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event)
+{
+    cl_int ret;
+    TRACE("\n");
+    if (!pclEnqueueFillImage) return CL_INVALID_VALUE;
+    ret = pclEnqueueFillImage(command_queue, image, fill_color,  origin, region, num_events_in_wait_list, event_wait_list, event);
     return ret;
 }
 
@@ -1387,6 +1595,16 @@ cl_int WINAPI wine_clEnqueueUnmapMemObject(cl_command_queue command_queue, cl_me
     return ret;
 }
 
+cl_int WINAPI wine_clEnqueueMigrateMemObjects(cl_command_queue command_queue, cl_uint num_mem_objects, const cl_mem * mem_objects, cl_mem_migration_flags flags,
+                                              cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event)
+{
+    cl_int ret;
+    TRACE("\n");
+    if (!pclEnqueueMigrateMemObjects) return CL_INVALID_VALUE;
+    ret = pclEnqueueMigrateMemObjects(command_queue, num_mem_objects, mem_objects, flags, num_events_in_wait_list, event_wait_list, event);
+    return ret;
+}
+
 cl_int WINAPI wine_clEnqueueNDRangeKernel(cl_command_queue command_queue, cl_kernel kernel, cl_uint work_dim,
                                           size_t * global_work_offset, size_t * global_work_size, size_t * local_work_size,
                                           cl_uint num_events_in_wait_list, cl_event * event_wait_list, cl_event * event)
@@ -1438,6 +1656,16 @@ cl_int WINAPI wine_clEnqueueMarker(cl_command_queue command_queue, cl_event * ev
     return ret;
 }
 
+cl_int WINAPI wine_clEnqueueMarkerWithWaitList(cl_command_queue command_queue, cl_uint num_events_in_wait_list,
+                                               const cl_event * event_wait_list, cl_event * event)
+{
+    cl_int ret;
+    TRACE("\n");
+    if (!pclEnqueueMarkerWithWaitList) return CL_INVALID_COMMAND_QUEUE;
+    ret = pclEnqueueMarkerWithWaitList(command_queue, num_events_in_wait_list, event_wait_list, event);
+    return ret;
+}
+
 cl_int WINAPI wine_clEnqueueWaitForEvents(cl_command_queue command_queue, cl_uint num_events, cl_event * event_list)
 {
     cl_int ret;
@@ -1456,9 +1684,33 @@ cl_int WINAPI wine_clEnqueueBarrier(cl_command_queue command_queue)
     return ret;
 }
 
+cl_int WINAPI wine_clEnqueueBarrierWithWaitList(cl_command_queue command_queue, cl_uint num_events_in_wait_list,
+                                                const cl_event * event_wait_list, cl_event * event)
+{
+    cl_int ret;
+    TRACE("\n");
+    if (!pclEnqueueBarrierWithWaitList) return CL_INVALID_COMMAND_QUEUE;
+    ret = pclEnqueueBarrierWithWaitList(command_queue, num_events_in_wait_list, event_wait_list, event);
+    return ret;
+}
+
 
 /*---------------------------------------------------------------*/
 /* Extension function access */
+
+void * WINAPI wine_clGetExtensionFunctionAddressForPlatform(cl_platform_id platform, const char * function_name)
+{
+    void * ret = NULL;
+    TRACE("(%p, %s)\n", platform, function_name);
+#if 0
+    if (!pclGetExtensionFunctionAddressForPlatform) return NULL;
+    ret = pclGetExtensionFunctionAddressForPlatform(platform, function_name);
+#else
+    FIXME("(%p, %s), extensions support is not implemented\n", platform, function_name);
+#endif
+    TRACE("(%p, %s)=%p\n", platform, function_name, ret);
+    return ret;
+}
 
 void * WINAPI wine_clGetExtensionFunctionAddress(const char * func_name)
 {
