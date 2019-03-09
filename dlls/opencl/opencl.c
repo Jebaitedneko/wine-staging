@@ -379,7 +379,8 @@ cl_int WINAPI wine_clGetPlatformIDs(cl_uint num_entries, cl_platform_id *platfor
 {
     cl_int ret;
     TRACE("(%d, %p, %p)\n", num_entries, platforms, num_platforms);
-    ret = clGetPlatformIDs(num_entries, platforms, num_platforms);
+    if (!pclGetPlatformIDs) return CL_INVALID_VALUE;
+    ret = pclGetPlatformIDs(num_entries, platforms, num_platforms);
     TRACE("(%d, %p, %p)=%d\n", num_entries, platforms, num_platforms, ret);
     return ret;
 }
@@ -389,6 +390,8 @@ cl_int WINAPI wine_clGetPlatformInfo(cl_platform_id platform, cl_platform_info p
 {
     cl_int ret;
     TRACE("(%p, 0x%x, %ld, %p, %p)\n", platform, param_name, param_value_size, param_value, param_value_size_ret);
+
+    if (!pclGetPlatformInfo) return CL_INVALID_VALUE;
 
     /* Hide all extensions.
      * TODO: Add individual extension support as needed.
@@ -412,7 +415,7 @@ cl_int WINAPI wine_clGetPlatformInfo(cl_platform_id platform, cl_platform_info p
     }
     else
     {
-        ret = clGetPlatformInfo(platform, param_name, param_value_size, param_value, param_value_size_ret);
+        ret = pclGetPlatformInfo(platform, param_name, param_value_size, param_value, param_value_size_ret);
     }
 
     TRACE("(%p, 0x%x, %ld, %p, %p)=%d\n", platform, param_name, param_value_size, param_value, param_value_size_ret, ret);
@@ -428,7 +431,8 @@ cl_int WINAPI wine_clGetDeviceIDs(cl_platform_id platform, cl_device_type device
 {
     cl_int ret;
     TRACE("(%p, 0x%lx, %d, %p, %p)\n", platform, (long unsigned int)device_type, num_entries, devices, num_devices);
-    ret = clGetDeviceIDs(platform, device_type, num_entries, devices, num_devices);
+    if (!pclGetDeviceIDs) return CL_INVALID_VALUE;
+    ret = pclGetDeviceIDs(platform, device_type, num_entries, devices, num_devices);
     TRACE("(%p, 0x%lx, %d, %p, %p)=%d\n", platform, (long unsigned int)device_type, num_entries, devices, num_devices, ret);
     return ret;
 }
@@ -438,6 +442,8 @@ cl_int WINAPI wine_clGetDeviceInfo(cl_device_id device, cl_device_info param_nam
 {
     cl_int ret;
     TRACE("(%p, 0x%x, %ld, %p, %p)\n",device, param_name, param_value_size, param_value, param_value_size_ret);
+
+    if (!pclGetDeviceInfo) return CL_INVALID_VALUE;
 
     /* Hide all extensions.
      * TODO: Add individual extension support as needed.
@@ -461,7 +467,7 @@ cl_int WINAPI wine_clGetDeviceInfo(cl_device_id device, cl_device_info param_nam
     }
     else
     {
-        ret = clGetDeviceInfo(device, param_name, param_value_size, param_value, param_value_size_ret);
+        ret = pclGetDeviceInfo(device, param_name, param_value_size, param_value, param_value_size_ret);
     }
 
     /* Filter out the CL_EXEC_NATIVE_KERNEL flag */
@@ -501,6 +507,11 @@ cl_context WINAPI wine_clCreateContext(const cl_context_properties * properties,
     cl_context ret;
     CONTEXT_CALLBACK *ccb;
     TRACE("(%p, %d, %p, %p, %p, %p)\n", properties, num_devices, devices, pfn_notify, user_data, errcode_ret);
+    if (!pclCreateContext)
+    {
+        *errcode_ret = CL_INVALID_VALUE;
+        return NULL;
+    }
     /* FIXME: The CONTEXT_CALLBACK structure is currently leaked.
      * Pointers to callback redirectors should be remembered and free()d when the context is destroyed.
      * The problem is determining when a context is being destroyed. clReleaseContext only decrements
@@ -510,7 +521,7 @@ cl_context WINAPI wine_clCreateContext(const cl_context_properties * properties,
     ccb = HeapAlloc(GetProcessHeap(), 0, sizeof(CONTEXT_CALLBACK));
     ccb->pfn_notify = pfn_notify;
     ccb->user_data = user_data;
-    ret = clCreateContext(properties, num_devices, devices, context_fn_notify, ccb, errcode_ret);
+    ret = pclCreateContext(properties, num_devices, devices, context_fn_notify, ccb, errcode_ret);
     TRACE("(%p, %d, %p, %p, %p, %p (%d)))=%p\n", properties, num_devices, devices, &pfn_notify, user_data, errcode_ret, errcode_ret ? *errcode_ret : 0, ret);
     return ret;
 }
@@ -522,6 +533,11 @@ cl_context WINAPI wine_clCreateContextFromType(const cl_context_properties * pro
     cl_context ret;
     CONTEXT_CALLBACK *ccb;
     TRACE("(%p, 0x%lx, %p, %p, %p)\n", properties, (long unsigned int)device_type, pfn_notify, user_data, errcode_ret);
+    if (!pclCreateContextFromType)
+    {
+        *errcode_ret = CL_INVALID_VALUE;
+        return NULL;
+    }
     /* FIXME: The CONTEXT_CALLBACK structure is currently leaked.
      * Pointers to callback redirectors should be remembered and free()d when the context is destroyed.
      * The problem is determining when a context is being destroyed. clReleaseContext only decrements
@@ -531,7 +547,7 @@ cl_context WINAPI wine_clCreateContextFromType(const cl_context_properties * pro
     ccb = HeapAlloc(GetProcessHeap(), 0, sizeof(CONTEXT_CALLBACK));
     ccb->pfn_notify = pfn_notify;
     ccb->user_data = user_data;
-    ret = clCreateContextFromType(properties, device_type, context_fn_notify, ccb, errcode_ret);
+    ret = pclCreateContextFromType(properties, device_type, context_fn_notify, ccb, errcode_ret);
     TRACE("(%p, 0x%lx, %p, %p, %p (%d)))=%p\n", properties, (long unsigned int)device_type, pfn_notify, user_data, errcode_ret, errcode_ret ? *errcode_ret : 0, ret);
     return ret;
 }
@@ -540,7 +556,8 @@ cl_int WINAPI wine_clRetainContext(cl_context context)
 {
     cl_int ret;
     TRACE("(%p)\n", context);
-    ret = clRetainContext(context);
+    if (!pclRetainContext) return CL_INVALID_VALUE;
+    ret = pclRetainContext(context);
     TRACE("(%p)=%d\n", context, ret);
     return ret;
 }
@@ -549,7 +566,8 @@ cl_int WINAPI wine_clReleaseContext(cl_context context)
 {
     cl_int ret;
     TRACE("(%p)\n", context);
-    ret = clReleaseContext(context);
+    if (!pclReleaseContext) return CL_INVALID_VALUE;
+    ret = pclReleaseContext(context);
     TRACE("(%p)=%d\n", context, ret);
     return ret;
 }
@@ -559,7 +577,8 @@ cl_int WINAPI wine_clGetContextInfo(cl_context context, cl_context_info param_na
 {
     cl_int ret;
     TRACE("(%p, 0x%x, %ld, %p, %p)\n", context, param_name, param_value_size, param_value, param_value_size_ret);
-    ret = clGetContextInfo(context, param_name, param_value_size, param_value, param_value_size_ret);
+    if (!pclGetContextInfo) return CL_INVALID_VALUE;
+    ret = pclGetContextInfo(context, param_name, param_value_size, param_value, param_value_size_ret);
     TRACE("(%p, 0x%x, %ld, %p, %p)=%d\n", context, param_name, param_value_size, param_value, param_value_size_ret, ret);
     return ret;
 }
@@ -573,7 +592,12 @@ cl_command_queue WINAPI wine_clCreateCommandQueue(cl_context context, cl_device_
 {
     cl_command_queue ret;
     TRACE("(%p, %p, 0x%lx, %p)\n", context, device, (long unsigned int)properties, errcode_ret);
-    ret = clCreateCommandQueue(context, device, properties, errcode_ret);
+    if (!pclCreateCommandQueue)
+    {
+        *errcode_ret = CL_INVALID_VALUE;
+        return NULL;
+    }
+    ret = pclCreateCommandQueue(context, device, properties, errcode_ret);
     TRACE("(%p, %p, 0x%lx, %p)=%p\n", context, device, (long unsigned int)properties, errcode_ret, ret);
     return ret;
 }
@@ -582,7 +606,8 @@ cl_int WINAPI wine_clRetainCommandQueue(cl_command_queue command_queue)
 {
     cl_int ret;
     TRACE("(%p)\n", command_queue);
-    ret = clRetainCommandQueue(command_queue);
+    if (!pclRetainCommandQueue) return CL_INVALID_VALUE;
+    ret = pclRetainCommandQueue(command_queue);
     TRACE("(%p)=%d\n", command_queue, ret);
     return ret;
 }
@@ -591,7 +616,8 @@ cl_int WINAPI wine_clReleaseCommandQueue(cl_command_queue command_queue)
 {
     cl_int ret;
     TRACE("(%p)\n", command_queue);
-    ret = clReleaseCommandQueue(command_queue);
+    if (!pclReleaseCommandQueue) return CL_INVALID_VALUE;
+    ret = pclReleaseCommandQueue(command_queue);
     TRACE("(%p)=%d\n", command_queue, ret);
     return ret;
 }
@@ -601,7 +627,8 @@ cl_int WINAPI wine_clGetCommandQueueInfo(cl_command_queue command_queue, cl_comm
 {
     cl_int ret;
     TRACE("%p, %d, %ld, %p, %p\n", command_queue, param_name, param_value_size, param_value, param_value_size_ret);
-    ret = clGetCommandQueueInfo(command_queue, param_name, param_value_size, param_value, param_value_size_ret);
+    if (!pclGetCommandQueueInfo) return CL_INVALID_VALUE;
+    ret = pclGetCommandQueueInfo(command_queue, param_name, param_value_size, param_value, param_value_size_ret);
     return ret;
 }
 
@@ -620,7 +647,12 @@ cl_mem WINAPI wine_clCreateBuffer(cl_context context, cl_mem_flags flags, size_t
 {
     cl_mem ret;
     TRACE("\n");
-    ret = clCreateBuffer(context, flags, size, host_ptr, errcode_ret);
+    if (!pclCreateBuffer)
+    {
+        *errcode_ret = CL_INVALID_VALUE;
+        return NULL;
+    }
+    ret = pclCreateBuffer(context, flags, size, host_ptr, errcode_ret);
     return ret;
 }
 
@@ -629,7 +661,12 @@ cl_mem WINAPI wine_clCreateImage2D(cl_context context, cl_mem_flags flags, cl_im
 {
     cl_mem ret;
     TRACE("\n");
-    ret = clCreateImage2D(context, flags, image_format, image_width, image_height, image_row_pitch, host_ptr, errcode_ret);
+    if (!pclCreateImage2D)
+    {
+        *errcode_ret = CL_INVALID_VALUE;
+        return NULL;
+    }
+    ret = pclCreateImage2D(context, flags, image_format, image_width, image_height, image_row_pitch, host_ptr, errcode_ret);
     return ret;
 }
 
@@ -639,7 +676,12 @@ cl_mem WINAPI wine_clCreateImage3D(cl_context context, cl_mem_flags flags, cl_im
 {
     cl_mem ret;
     TRACE("\n");
-    ret = clCreateImage3D(context, flags, image_format, image_width, image_height, image_depth, image_row_pitch, image_slice_pitch, host_ptr, errcode_ret);
+    if (!pclCreateImage3D)
+    {
+        *errcode_ret = CL_INVALID_VALUE;
+        return NULL;
+    }
+    ret = pclCreateImage3D(context, flags, image_format, image_width, image_height, image_depth, image_row_pitch, image_slice_pitch, host_ptr, errcode_ret);
     return ret;
 }
 
@@ -647,7 +689,8 @@ cl_int WINAPI wine_clRetainMemObject(cl_mem memobj)
 {
     cl_int ret;
     TRACE("(%p)\n", memobj);
-    ret = clRetainMemObject(memobj);
+    if (!pclRetainMemObject) return CL_INVALID_VALUE;
+    ret = pclRetainMemObject(memobj);
     TRACE("(%p)=%d\n", memobj, ret);
     return ret;
 }
@@ -656,7 +699,8 @@ cl_int WINAPI wine_clReleaseMemObject(cl_mem memobj)
 {
     cl_int ret;
     TRACE("(%p)\n", memobj);
-    ret = clReleaseMemObject(memobj);
+    if (!pclReleaseMemObject) return CL_INVALID_VALUE;
+    ret = pclReleaseMemObject(memobj);
     TRACE("(%p)=%d\n", memobj, ret);
     return ret;
 }
@@ -666,7 +710,8 @@ cl_int WINAPI wine_clGetSupportedImageFormats(cl_context context, cl_mem_flags f
 {
     cl_int ret;
     TRACE("\n");
-    ret = clGetSupportedImageFormats(context, flags, image_type, num_entries, image_formats, num_image_formats);
+    if (!pclGetSupportedImageFormats) return CL_INVALID_VALUE;
+    ret = pclGetSupportedImageFormats(context, flags, image_type, num_entries, image_formats, num_image_formats);
     return ret;
 }
 
@@ -674,7 +719,8 @@ cl_int WINAPI wine_clGetMemObjectInfo(cl_mem memobj, cl_mem_info param_name, siz
 {
     cl_int ret;
     TRACE("\n");
-    ret = clGetMemObjectInfo(memobj, param_name, param_value_size, param_value, param_value_size_ret);
+    if (!pclGetMemObjectInfo) return CL_INVALID_VALUE;
+    ret = pclGetMemObjectInfo(memobj, param_name, param_value_size, param_value, param_value_size_ret);
     return ret;
 }
 
@@ -682,7 +728,8 @@ cl_int WINAPI wine_clGetImageInfo(cl_mem image, cl_image_info param_name, size_t
 {
     cl_int ret;
     TRACE("\n");
-    ret = clGetImageInfo(image, param_name, param_value_size, param_value, param_value_size_ret);
+    if (!pclGetImageInfo) return CL_INVALID_VALUE;
+    ret = pclGetImageInfo(image, param_name, param_value_size, param_value, param_value_size_ret);
     return ret;
 }
 
@@ -695,7 +742,12 @@ cl_sampler WINAPI wine_clCreateSampler(cl_context context, cl_bool normalized_co
 {
     cl_sampler ret;
     TRACE("\n");
-    ret = clCreateSampler(context, normalized_coords, addressing_mode, filter_mode, errcode_ret);
+    if (!pclCreateSampler)
+    {
+        *errcode_ret = CL_INVALID_VALUE;
+        return NULL;
+    }
+    ret = pclCreateSampler(context, normalized_coords, addressing_mode, filter_mode, errcode_ret);
     return ret;
 }
 
@@ -703,7 +755,8 @@ cl_int WINAPI wine_clRetainSampler(cl_sampler sampler)
 {
     cl_int ret;
     TRACE("\n");
-    ret = clRetainSampler(sampler);
+    if (!pclRetainSampler) return CL_INVALID_VALUE;
+    ret = pclRetainSampler(sampler);
     return ret;
 }
 
@@ -711,7 +764,8 @@ cl_int WINAPI wine_clReleaseSampler(cl_sampler sampler)
 {
     cl_int ret;
     TRACE("\n");
-    ret = clReleaseSampler(sampler);
+    if (!pclReleaseSampler) return CL_INVALID_VALUE;
+    ret = pclReleaseSampler(sampler);
     return ret;
 }
 
@@ -720,7 +774,8 @@ cl_int WINAPI wine_clGetSamplerInfo(cl_sampler sampler, cl_sampler_info param_na
 {
     cl_int ret;
     TRACE("\n");
-    ret = clGetSamplerInfo(sampler, param_name, param_value_size, param_value, param_value_size_ret);
+    if (!pclGetSamplerInfo) return CL_INVALID_VALUE;
+    ret = pclGetSamplerInfo(sampler, param_name, param_value_size, param_value, param_value_size_ret);
     return ret;
 }
 
@@ -733,7 +788,12 @@ cl_program WINAPI wine_clCreateProgramWithSource(cl_context context, cl_uint cou
 {
     cl_program ret;
     TRACE("\n");
-    ret = clCreateProgramWithSource(context, count, strings, lengths, errcode_ret);
+    if (!pclCreateProgramWithSource)
+    {
+        *errcode_ret = CL_INVALID_VALUE;
+        return NULL;
+    }
+    ret = pclCreateProgramWithSource(context, count, strings, lengths, errcode_ret);
     return ret;
 }
 
@@ -743,7 +803,12 @@ cl_program WINAPI wine_clCreateProgramWithBinary(cl_context context, cl_uint num
 {
     cl_program ret;
     TRACE("\n");
-    ret = clCreateProgramWithBinary(context, num_devices, device_list, lengths, binaries, binary_status, errcode_ret);
+    if (!pclCreateProgramWithBinary)
+    {
+        *errcode_ret = CL_INVALID_VALUE;
+        return NULL;
+    }
+    ret = pclCreateProgramWithBinary(context, num_devices, device_list, lengths, binaries, binary_status, errcode_ret);
     return ret;
 }
 
@@ -751,7 +816,8 @@ cl_int WINAPI wine_clRetainProgram(cl_program program)
 {
     cl_int ret;
     TRACE("\n");
-    ret = clRetainProgram(program);
+    if (!pclRetainProgram) return CL_INVALID_PROGRAM;
+    ret = pclRetainProgram(program);
     return ret;
 }
 
@@ -759,7 +825,8 @@ cl_int WINAPI wine_clReleaseProgram(cl_program program)
 {
     cl_int ret;
     TRACE("\n");
-    ret = clReleaseProgram(program);
+    if (!pclReleaseProgram) return CL_INVALID_PROGRAM;
+    ret = pclReleaseProgram(program);
     return ret;
 }
 
@@ -785,6 +852,7 @@ cl_int WINAPI wine_clBuildProgram(cl_program program, cl_uint num_devices, const
 {
     cl_int ret;
     TRACE("\n");
+    if (!pclBuildProgram) return CL_INVALID_VALUE;
     if(pfn_notify)
     {
         /* When pfn_notify is provided, clBuildProgram is asynchronous */
@@ -792,12 +860,12 @@ cl_int WINAPI wine_clBuildProgram(cl_program program, cl_uint num_devices, const
         pcb = HeapAlloc(GetProcessHeap(), 0, sizeof(PROGRAM_CALLBACK));
         pcb->pfn_notify = pfn_notify;
         pcb->user_data = user_data;
-        ret = clBuildProgram(program, num_devices, device_list, options, program_fn_notify, pcb);
+        ret = pclBuildProgram(program, num_devices, device_list, options, program_fn_notify, pcb);
     }
     else
     {
         /* When pfn_notify is NULL, clBuildProgram is synchronous */
-        ret = clBuildProgram(program, num_devices, device_list, options, NULL, user_data);
+        ret = pclBuildProgram(program, num_devices, device_list, options, NULL, user_data);
     }
     return ret;
 }
@@ -806,7 +874,8 @@ cl_int WINAPI wine_clUnloadCompiler(void)
 {
     cl_int ret;
     TRACE("()\n");
-    ret = clUnloadCompiler();
+    if (!pclUnloadCompiler) return CL_SUCCESS;
+    ret = pclUnloadCompiler();
     TRACE("()=%d\n", ret);
     return ret;
 }
@@ -816,7 +885,8 @@ cl_int WINAPI wine_clGetProgramInfo(cl_program program, cl_program_info param_na
 {
     cl_int ret;
     TRACE("\n");
-    ret = clGetProgramInfo(program, param_name, param_value_size, param_value, param_value_size_ret);
+    if (!pclGetProgramInfo) return CL_INVALID_VALUE;
+    ret = pclGetProgramInfo(program, param_name, param_value_size, param_value, param_value_size_ret);
     return ret;
 }
 
@@ -826,7 +896,8 @@ cl_int WINAPI wine_clGetProgramBuildInfo(cl_program program, cl_device_id device
 {
     cl_int ret;
     TRACE("\n");
-    ret = clGetProgramBuildInfo(program, device, param_name, param_value_size, param_value, param_value_size_ret);
+    if (!pclGetProgramBuildInfo) return CL_INVALID_VALUE;
+    ret = pclGetProgramBuildInfo(program, device, param_name, param_value_size, param_value, param_value_size_ret);
     return ret;
 }
 
@@ -838,7 +909,12 @@ cl_kernel WINAPI wine_clCreateKernel(cl_program program, char * kernel_name, cl_
 {
     cl_kernel ret;
     TRACE("\n");
-    ret = clCreateKernel(program, kernel_name, errcode_ret);
+    if (!pclCreateKernel)
+    {
+        *errcode_ret = CL_INVALID_VALUE;
+        return NULL;
+    }
+    ret = pclCreateKernel(program, kernel_name, errcode_ret);
     return ret;
 }
 
@@ -847,7 +923,8 @@ cl_int WINAPI wine_clCreateKernelsInProgram(cl_program program, cl_uint num_kern
 {
     cl_int ret;
     TRACE("\n");
-    ret = clCreateKernelsInProgram(program, num_kernels, kernels, num_kernels_ret);
+    if (!pclCreateKernelsInProgram) return CL_INVALID_VALUE;
+    ret = pclCreateKernelsInProgram(program, num_kernels, kernels, num_kernels_ret);
     return ret;
 }
 
@@ -855,7 +932,8 @@ cl_int WINAPI wine_clRetainKernel(cl_kernel kernel)
 {
     cl_int ret;
     TRACE("\n");
-    ret = clRetainKernel(kernel);
+    if (!pclRetainKernel) return CL_INVALID_KERNEL;
+    ret = pclRetainKernel(kernel);
     return ret;
 }
 
@@ -863,7 +941,8 @@ cl_int WINAPI wine_clReleaseKernel(cl_kernel kernel)
 {
     cl_int ret;
     TRACE("\n");
-    ret = clReleaseKernel(kernel);
+    if (!pclReleaseKernel) return CL_INVALID_KERNEL;
+    ret = pclReleaseKernel(kernel);
     return ret;
 }
 
@@ -871,7 +950,8 @@ cl_int WINAPI wine_clSetKernelArg(cl_kernel kernel, cl_uint arg_index, size_t ar
 {
     cl_int ret;
     TRACE("\n");
-    ret = clSetKernelArg(kernel, arg_index, arg_size, arg_value);
+    if (!pclSetKernelArg) return CL_INVALID_KERNEL;
+    ret = pclSetKernelArg(kernel, arg_index, arg_size, arg_value);
     return ret;
 }
 
@@ -880,7 +960,8 @@ cl_int WINAPI wine_clGetKernelInfo(cl_kernel kernel, cl_kernel_info param_name,
 {
     cl_int ret;
     TRACE("\n");
-    ret = clGetKernelInfo(kernel, param_name, param_value_size, param_value, param_value_size_ret);
+    if (!pclGetKernelInfo) return CL_INVALID_VALUE;
+    ret = pclGetKernelInfo(kernel, param_name, param_value_size, param_value, param_value_size_ret);
     return ret;
 }
 
@@ -890,7 +971,8 @@ cl_int WINAPI wine_clGetKernelWorkGroupInfo(cl_kernel kernel, cl_device_id devic
 {
     cl_int ret;
     TRACE("\n");
-    ret = clGetKernelWorkGroupInfo(kernel, device, param_name, param_value_size, param_value, param_value_size_ret);
+    if (!pclGetKernelWorkGroupInfo) return CL_INVALID_VALUE;
+    ret = pclGetKernelWorkGroupInfo(kernel, device, param_name, param_value_size, param_value, param_value_size_ret);
     return ret;
 }
 
@@ -902,7 +984,8 @@ cl_int WINAPI wine_clWaitForEvents(cl_uint num_events, cl_event * event_list)
 {
     cl_int ret;
     TRACE("\n");
-    ret = clWaitForEvents(num_events, event_list);
+    if (!pclWaitForEvents) return CL_INVALID_EVENT;
+    ret = pclWaitForEvents(num_events, event_list);
     return ret;
 }
 
@@ -911,7 +994,8 @@ cl_int WINAPI wine_clGetEventInfo(cl_event event, cl_event_info param_name, size
 {
     cl_int ret;
     TRACE("\n");
-    ret = clGetEventInfo(event, param_name, param_value_size, param_value, param_value_size_ret);
+    if (!pclGetEventInfo) return CL_INVALID_EVENT;
+    ret = pclGetEventInfo(event, param_name, param_value_size, param_value, param_value_size_ret);
     return ret;
 }
 
@@ -919,7 +1003,8 @@ cl_int WINAPI wine_clRetainEvent(cl_event event)
 {
     cl_int ret;
     TRACE("\n");
-    ret = clRetainEvent(event);
+    if (!pclRetainEvent) return CL_INVALID_EVENT;
+    ret = pclRetainEvent(event);
     return ret;
 }
 
@@ -927,7 +1012,8 @@ cl_int WINAPI wine_clReleaseEvent(cl_event event)
 {
     cl_int ret;
     TRACE("\n");
-    ret = clReleaseEvent(event);
+    if (!pclReleaseEvent) return CL_INVALID_EVENT;
+    ret = pclReleaseEvent(event);
     return ret;
 }
 
@@ -940,7 +1026,8 @@ cl_int WINAPI wine_clGetEventProfilingInfo(cl_event event, cl_profiling_info par
 {
     cl_int ret;
     TRACE("\n");
-    ret = clGetEventProfilingInfo(event, param_name, param_value_size, param_value, param_value_size_ret);
+    if (!pclGetEventProfilingInfo) return CL_INVALID_EVENT;
+    ret = pclGetEventProfilingInfo(event, param_name, param_value_size, param_value, param_value_size_ret);
     return ret;
 }
 
@@ -952,7 +1039,8 @@ cl_int WINAPI wine_clFlush(cl_command_queue command_queue)
 {
     cl_int ret;
     TRACE("(%p)\n", command_queue);
-    ret = clFlush(command_queue);
+    if (!pclFlush) return CL_INVALID_COMMAND_QUEUE;
+    ret = pclFlush(command_queue);
     TRACE("(%p)=%d\n", command_queue, ret);
     return ret;
 }
@@ -961,7 +1049,8 @@ cl_int WINAPI wine_clFinish(cl_command_queue command_queue)
 {
     cl_int ret;
     TRACE("(%p)\n", command_queue);
-    ret = clFinish(command_queue);
+    if (!pclFinish) return CL_INVALID_COMMAND_QUEUE;
+    ret = pclFinish(command_queue);
     TRACE("(%p)=%d\n", command_queue, ret);
     return ret;
 }
@@ -976,7 +1065,8 @@ cl_int WINAPI wine_clEnqueueReadBuffer(cl_command_queue command_queue, cl_mem bu
 {
     cl_int ret;
     TRACE("\n");
-    ret = clEnqueueReadBuffer(command_queue, buffer, blocking_read, offset, cb, ptr, num_events_in_wait_list, event_wait_list, event);
+    if (!pclEnqueueReadBuffer) return CL_INVALID_VALUE;
+    ret = pclEnqueueReadBuffer(command_queue, buffer, blocking_read, offset, cb, ptr, num_events_in_wait_list, event_wait_list, event);
     return ret;
 }
 
@@ -986,7 +1076,8 @@ cl_int WINAPI wine_clEnqueueWriteBuffer(cl_command_queue command_queue, cl_mem b
 {
     cl_int ret;
     TRACE("\n");
-    ret = clEnqueueWriteBuffer(command_queue, buffer, blocking_write, offset, cb, ptr, num_events_in_wait_list, event_wait_list, event);
+    if (!pclEnqueueWriteBuffer) return CL_INVALID_VALUE;
+    ret = pclEnqueueWriteBuffer(command_queue, buffer, blocking_write, offset, cb, ptr, num_events_in_wait_list, event_wait_list, event);
     return ret;
 }
 
@@ -996,7 +1087,8 @@ cl_int WINAPI wine_clEnqueueCopyBuffer(cl_command_queue command_queue, cl_mem sr
 {
     cl_int ret;
     TRACE("\n");
-    ret = clEnqueueCopyBuffer(command_queue, src_buffer, dst_buffer, src_offset, dst_offset, cb, num_events_in_wait_list, event_wait_list, event);
+    if (!pclEnqueueCopyBuffer) return CL_INVALID_VALUE;
+    ret = pclEnqueueCopyBuffer(command_queue, src_buffer, dst_buffer, src_offset, dst_offset, cb, num_events_in_wait_list, event_wait_list, event);
     return ret;
 }
 
@@ -1008,7 +1100,8 @@ cl_int WINAPI wine_clEnqueueReadImage(cl_command_queue command_queue, cl_mem ima
     cl_int ret;
     TRACE("(%p, %p, %d, %p, %p, %ld, %ld, %p, %d, %p, %p)\n", command_queue, image, blocking_read,
           origin, region, row_pitch, slice_pitch, ptr, num_events_in_wait_list, event_wait_list, event);
-    ret = clEnqueueReadImage(command_queue, image, blocking_read, origin, region, row_pitch, slice_pitch, ptr, num_events_in_wait_list, event_wait_list, event);
+    if (!pclEnqueueReadImage) return CL_INVALID_VALUE;
+    ret = pclEnqueueReadImage(command_queue, image, blocking_read, origin, region, row_pitch, slice_pitch, ptr, num_events_in_wait_list, event_wait_list, event);
     TRACE("(%p, %p, %d, %p, %p, %ld, %ld, %p, %d, %p, %p)=%d\n", command_queue, image, blocking_read,
           origin, region, row_pitch, slice_pitch, ptr, num_events_in_wait_list, event_wait_list, event, ret);
     return ret;
@@ -1021,7 +1114,8 @@ cl_int WINAPI wine_clEnqueueWriteImage(cl_command_queue command_queue, cl_mem im
 {
     cl_int ret;
     TRACE("\n");
-    ret = clEnqueueWriteImage(command_queue, image, blocking_write, origin, region, input_row_pitch, input_slice_pitch, ptr, num_events_in_wait_list, event_wait_list, event);
+    if (!pclEnqueueWriteImage) return CL_INVALID_VALUE;
+    ret = pclEnqueueWriteImage(command_queue, image, blocking_write, origin, region, input_row_pitch, input_slice_pitch, ptr, num_events_in_wait_list, event_wait_list, event);
     return ret;
 }
 
@@ -1031,7 +1125,8 @@ cl_int WINAPI wine_clEnqueueCopyImage(cl_command_queue command_queue, cl_mem src
 {
     cl_int ret;
     TRACE("\n");
-    ret = clEnqueueCopyImage(command_queue, src_image, dst_image, src_origin, dst_origin, region, num_events_in_wait_list, event_wait_list, event);
+    if (!pclEnqueueCopyImage) return CL_INVALID_VALUE;
+    ret = pclEnqueueCopyImage(command_queue, src_image, dst_image, src_origin, dst_origin, region, num_events_in_wait_list, event_wait_list, event);
     return ret;
 }
 
@@ -1041,7 +1136,8 @@ cl_int WINAPI wine_clEnqueueCopyImageToBuffer(cl_command_queue command_queue, cl
 {
     cl_int ret;
     TRACE("\n");
-    ret = clEnqueueCopyImageToBuffer(command_queue, src_image, dst_buffer, src_origin, region, dst_offset, num_events_in_wait_list, event_wait_list, event);
+    if (!pclEnqueueCopyImageToBuffer) return CL_INVALID_VALUE;
+    ret = pclEnqueueCopyImageToBuffer(command_queue, src_image, dst_buffer, src_origin, region, dst_offset, num_events_in_wait_list, event_wait_list, event);
     return ret;
 }
 
@@ -1051,7 +1147,8 @@ cl_int WINAPI wine_clEnqueueCopyBufferToImage(cl_command_queue command_queue, cl
 {
     cl_int ret;
     TRACE("\n");
-    ret = clEnqueueCopyBufferToImage(command_queue, src_buffer, dst_image, src_offset, dst_origin, region, num_events_in_wait_list, event_wait_list, event);
+    if (!pclEnqueueCopyBufferToImage) return CL_INVALID_VALUE;
+    ret = pclEnqueueCopyBufferToImage(command_queue, src_buffer, dst_image, src_offset, dst_origin, region, num_events_in_wait_list, event_wait_list, event);
     return ret;
 }
 
@@ -1061,7 +1158,12 @@ void * WINAPI wine_clEnqueueMapBuffer(cl_command_queue command_queue, cl_mem buf
 {
     void * ret;
     TRACE("\n");
-    ret = clEnqueueMapBuffer(command_queue, buffer, blocking_map, map_flags, offset, cb, num_events_in_wait_list, event_wait_list, event, errcode_ret);
+    if (!pclEnqueueMapBuffer)
+    {
+        *errcode_ret = CL_INVALID_VALUE;
+        return NULL;
+    }
+    ret = pclEnqueueMapBuffer(command_queue, buffer, blocking_map, map_flags, offset, cb, num_events_in_wait_list, event_wait_list, event, errcode_ret);
     return ret;
 }
 
@@ -1072,7 +1174,12 @@ void * WINAPI wine_clEnqueueMapImage(cl_command_queue command_queue, cl_mem imag
 {
     void * ret;
     TRACE("\n");
-    ret = clEnqueueMapImage(command_queue, image, blocking_map, map_flags, origin, region, image_row_pitch, image_slice_pitch, num_events_in_wait_list, event_wait_list, event, errcode_ret);
+    if (!pclEnqueueMapImage)
+    {
+        *errcode_ret = CL_INVALID_VALUE;
+        return NULL;
+    }
+    ret = pclEnqueueMapImage(command_queue, image, blocking_map, map_flags, origin, region, image_row_pitch, image_slice_pitch, num_events_in_wait_list, event_wait_list, event, errcode_ret);
     return ret;
 }
 
@@ -1081,7 +1188,8 @@ cl_int WINAPI wine_clEnqueueUnmapMemObject(cl_command_queue command_queue, cl_me
 {
     cl_int ret;
     TRACE("\n");
-    ret = clEnqueueUnmapMemObject(command_queue, memobj, mapped_ptr, num_events_in_wait_list, event_wait_list, event);
+    if (!pclEnqueueUnmapMemObject) return CL_INVALID_VALUE;
+    ret = pclEnqueueUnmapMemObject(command_queue, memobj, mapped_ptr, num_events_in_wait_list, event_wait_list, event);
     return ret;
 }
 
@@ -1091,7 +1199,8 @@ cl_int WINAPI wine_clEnqueueNDRangeKernel(cl_command_queue command_queue, cl_ker
 {
     cl_int ret;
     TRACE("\n");
-    ret = clEnqueueNDRangeKernel(command_queue, kernel, work_dim, global_work_offset, global_work_size, local_work_size, num_events_in_wait_list, event_wait_list, event);
+    if (!pclEnqueueNDRangeKernel) return CL_INVALID_VALUE;
+    ret = pclEnqueueNDRangeKernel(command_queue, kernel, work_dim, global_work_offset, global_work_size, local_work_size, num_events_in_wait_list, event_wait_list, event);
     return ret;
 }
 
@@ -1100,7 +1209,8 @@ cl_int WINAPI wine_clEnqueueTask(cl_command_queue command_queue, cl_kernel kerne
 {
     cl_int ret;
     TRACE("\n");
-    ret = clEnqueueTask(command_queue, kernel, num_events_in_wait_list, event_wait_list, event);
+    if (!pclEnqueueTask) return CL_INVALID_VALUE;
+    ret = pclEnqueueTask(command_queue, kernel, num_events_in_wait_list, event_wait_list, event);
     return ret;
 }
 
@@ -1129,7 +1239,8 @@ cl_int WINAPI wine_clEnqueueMarker(cl_command_queue command_queue, cl_event * ev
 {
     cl_int ret;
     TRACE("\n");
-    ret = clEnqueueMarker(command_queue, event);
+    if (!pclEnqueueMarker) return CL_INVALID_VALUE;
+    ret = pclEnqueueMarker(command_queue, event);
     return ret;
 }
 
@@ -1137,7 +1248,8 @@ cl_int WINAPI wine_clEnqueueWaitForEvents(cl_command_queue command_queue, cl_uin
 {
     cl_int ret;
     TRACE("\n");
-    ret = clEnqueueWaitForEvents(command_queue, num_events, event_list);
+    if (!pclEnqueueWaitForEvents) return CL_INVALID_VALUE;
+    ret = pclEnqueueWaitForEvents(command_queue, num_events, event_list);
     return ret;
 }
 
@@ -1145,7 +1257,8 @@ cl_int WINAPI wine_clEnqueueBarrier(cl_command_queue command_queue)
 {
     cl_int ret;
     TRACE("\n");
-    ret = clEnqueueBarrier(command_queue);
+    if (!pclEnqueueBarrier) return CL_INVALID_VALUE;
+    ret = pclEnqueueBarrier(command_queue);
     return ret;
 }
 
