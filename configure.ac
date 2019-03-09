@@ -1340,6 +1340,7 @@ dnl **** Check for OpenCL ****
 if test "$ac_cv_header_CL_cl_h" = "yes"
 then
     AC_CHECK_LIB(OpenCL,clGetPlatformInfo,[AC_SUBST(OPENCL_LIBS,["-lOpenCL"])])
+    WINE_CHECK_SONAME(OpenCL,clGetPlatformInfo,,[AC_DEFINE_UNQUOTED(SONAME_LIBOPENCL,["libOpenCL.$LIBEXT"])])
 fi
 WINE_NOTICE_WITH(opencl,[test "x$ac_cv_lib_OpenCL_clGetPlatformInfo" != xyes],
                  [OpenCL ${notice_platform}development files not found, OpenCL won't be supported.],
