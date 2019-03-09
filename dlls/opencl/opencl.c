@@ -204,6 +204,28 @@ static cl_int (*pclEnqueueBarrier)(cl_command_queue command_queue);
 /* Extension function access */
 static void * (*pclGetExtensionFunctionAddress)(const char * func_name);
 
+/* OpenCL 1.1 functions */
+static cl_mem (*pclCreateSubBuffer)(cl_mem buffer, cl_mem_flags flags,
+                                    cl_buffer_create_type buffer_create_type, const void * buffer_create_info, cl_int * errcode_ret);
+static cl_event (*pclCreateUserEvent)(cl_context context, cl_int * errcode_ret);
+static cl_int (*pclEnqueueCopyBufferRect)(cl_command_queue command_queue, cl_mem src_buffer, cl_mem dst_buffer,
+                                          const size_t * src_origin, const size_t * dst_origin, const size_t * region,
+                                          size_t src_row_pitch, size_t src_slice_pitch,
+                                          size_t dst_row_pitch, size_t dst_slice_pitch,
+                                          cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event);
+static cl_int (*pclEnqueueReadBufferRect)(cl_command_queue command_queue, cl_mem buffer, cl_bool blocking_read,
+                                          const size_t * buffer_origin, const size_t * host_origin, const size_t * region,
+                                          size_t buffer_row_pitch, size_t buffer_slice_pitch, size_t host_row_pitch, size_t host_slice_pitch,
+                                          void * ptr, cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event);
+static cl_int (*pclEnqueueWriteBufferRect)(cl_command_queue command_queue, cl_mem buffer, cl_bool blocking_read,
+                                           const size_t * buffer_origin, const size_t * host_origin, const size_t * region,
+                                           size_t buffer_row_pitch, size_t buffer_slice_pitch, size_t host_row_pitch, size_t host_slice_pitch,
+                                           const void * ptr, cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event);
+static cl_int (*pclSetEventCallback)(cl_event event, cl_int command_exec_callback_type,
+                                     void (*pfn_notify)(cl_event, cl_int, void *), void *user_data);
+static cl_int (*pclSetMemObjectDestructorCallback)(cl_mem memobj, void (*pfn_notify)(cl_mem, void*), void *user_data);
+static cl_int (*pclSetUserEventStatus)(cl_event event, cl_int execution_status);
+
 
 static BOOL init_opencl(void);
 static BOOL load_opencl_func(void);
@@ -365,6 +387,18 @@ static BOOL load_opencl_func(void)
     LOAD_FUNCPTR(clEnqueueBarrier);
     /* Extension function access */
     LOAD_FUNCPTR(clGetExtensionFunctionAddress);
+
+    /* OpenCL 1.1 functions */
+#ifdef CL_VERSION_1_1
+    LOAD_FUNCPTR(clCreateSubBuffer);
+    LOAD_FUNCPTR(clCreateUserEvent);
+    LOAD_FUNCPTR(clEnqueueCopyBufferRect);
+    LOAD_FUNCPTR(clEnqueueReadBufferRect);
+    LOAD_FUNCPTR(clEnqueueWriteBufferRect);
+    LOAD_FUNCPTR(clSetEventCallback);
+    LOAD_FUNCPTR(clSetMemObjectDestructorCallback);
+    LOAD_FUNCPTR(clSetUserEventStatus);
+#endif
 
 #undef LOAD_FUNCPTR
 
@@ -656,6 +690,20 @@ cl_mem WINAPI wine_clCreateBuffer(cl_context context, cl_mem_flags flags, size_t
     return ret;
 }
 
+cl_mem WINAPI wine_clCreateSubBuffer(cl_mem buffer, cl_mem_flags flags,
+                                     cl_buffer_create_type buffer_create_type, const void * buffer_create_info, cl_int * errcode_ret)
+{
+    cl_mem ret;
+    TRACE("\n");
+    if (!pclCreateSubBuffer)
+    {
+        *errcode_ret = CL_INVALID_VALUE;
+        return NULL;
+    }
+    ret = pclCreateSubBuffer(buffer, flags, buffer_create_type, buffer_create_info, errcode_ret);
+    return ret;
+}
+
 cl_mem WINAPI wine_clCreateImage2D(cl_context context, cl_mem_flags flags, cl_image_format * image_format,
                                    size_t image_width, size_t image_height, size_t image_row_pitch, void * host_ptr, cl_int * errcode_ret)
 {
@@ -730,6 +778,46 @@ cl_int WINAPI wine_clGetImageInfo(cl_mem image, cl_image_info param_name, size_t
     TRACE("\n");
     if (!pclGetImageInfo) return CL_INVALID_VALUE;
     ret = pclGetImageInfo(image, param_name, param_value_size, param_value, param_value_size_ret);
+    return ret;
+}
+
+typedef struct
+{
+    void WINAPI (*pfn_notify)(cl_mem memobj, void* user_data);
+    void *user_data;
+} MEM_CALLBACK;
+
+static void mem_fn_notify(cl_mem memobj, void* user_data)
+{
+    MEM_CALLBACK *mcb;
+    FIXME("(%p, %p)\n", memobj, user_data);
+    mcb = (MEM_CALLBACK *) user_data;
+    mcb->pfn_notify(memobj, mcb->user_data);
+    HeapFree(GetProcessHeap(), 0, mcb);
+    FIXME("Callback COMPLETED\n");
+}
+
+cl_int WINAPI wine_clSetMemObjectDestructorCallback(cl_mem memobj, void WINAPI (*pfn_notify)(cl_mem, void*), void *user_data)
+{
+    /* FIXME: Based on PROGRAM_CALLBACK/program_fn_notify function. I'm not sure about this. */
+    cl_int ret;
+    FIXME("(%p, %p, %p)\n", memobj, pfn_notify, user_data);
+    if (!pclSetMemObjectDestructorCallback) return CL_INVALID_VALUE;
+    if(pfn_notify)
+    {
+        /* When pfn_notify is provided, clSetMemObjectDestructorCallback is asynchronous */
+        MEM_CALLBACK *mcb;
+        mcb = HeapAlloc(GetProcessHeap(), 0, sizeof(MEM_CALLBACK));
+        mcb->pfn_notify = pfn_notify;
+        mcb->user_data = user_data;
+        ret = pclSetMemObjectDestructorCallback(memobj, mem_fn_notify, user_data);
+    }
+    else
+    {
+        /* When pfn_notify is NULL, clSetMemObjectDestructorCallback is synchronous */
+        ret = pclSetMemObjectDestructorCallback(memobj, NULL, user_data);
+    }
+    FIXME("(%p, %p, %p)=%d\n", memobj, pfn_notify, user_data, ret);
     return ret;
 }
 
@@ -1017,6 +1105,69 @@ cl_int WINAPI wine_clReleaseEvent(cl_event event)
     return ret;
 }
 
+cl_event WINAPI wine_clCreateUserEvent(cl_context context, cl_int * errcode_ret)
+{
+    cl_event ret;
+    TRACE("\n");
+    if (!pclCreateUserEvent)
+    {
+        *errcode_ret = CL_INVALID_CONTEXT;
+        return NULL;
+    }
+    ret = pclCreateUserEvent(context, errcode_ret);
+    return ret;
+}
+
+typedef struct
+{
+    void WINAPI (*pfn_notify)(cl_event event, cl_int num, void* user_data);
+    void *user_data;
+} EVENT_CALLBACK;
+
+static void event_fn_notify(cl_event event, cl_int num, void* user_data)
+{
+    EVENT_CALLBACK *ecb;
+    FIXME("(%p, %d, %p)\n", event, num, user_data);
+    ecb = (EVENT_CALLBACK *) user_data;
+    ecb->pfn_notify(event, num, ecb->user_data);
+    HeapFree(GetProcessHeap(), 0, ecb);
+    FIXME("Callback COMPLETED\n");
+}
+
+cl_int WINAPI wine_clSetEventCallback(cl_event event, cl_int command_exec_callback_type,
+                                      void WINAPI (*pfn_notify)(cl_event, cl_int, void *), void *user_data)
+{
+    /* FIXME: Based on PROGRAM_CALLBACK/program_fn_notify function. I'm not sure about this. */
+    cl_int ret;
+    FIXME("(%p, %d, %p, %p)\n", event, command_exec_callback_type, pfn_notify, user_data);
+    if (!pclSetEventCallback) return CL_INVALID_EVENT;
+    if(pfn_notify)
+    {
+        /* When pfn_notify is provided, clSetEventCallback is asynchronous */
+        EVENT_CALLBACK *ecb;
+        ecb = HeapAlloc(GetProcessHeap(), 0, sizeof(EVENT_CALLBACK));
+        ecb->pfn_notify = pfn_notify;
+        ecb->user_data = user_data;
+        ret = pclSetEventCallback(event, command_exec_callback_type, event_fn_notify, user_data);
+    }
+    else
+    {
+        /* When pfn_notify is NULL, clSetEventCallback is synchronous */
+        ret = pclSetEventCallback(event, command_exec_callback_type, NULL, user_data);
+    }
+    FIXME("(%p, %d, %p, %p)=%d\n", event, command_exec_callback_type, pfn_notify, user_data, ret);
+    return ret;
+}
+
+cl_int WINAPI wine_clSetUserEventStatus(cl_event event, cl_int execution_status)
+{
+    cl_int ret;
+    TRACE("\n");
+    if (!pclSetUserEventStatus) return CL_INVALID_EVENT;
+    ret = pclSetUserEventStatus(event, execution_status);
+    return ret;
+}
+
 
 /*---------------------------------------------------------------*/
 /* Profiling APIs  */
@@ -1070,6 +1221,21 @@ cl_int WINAPI wine_clEnqueueReadBuffer(cl_command_queue command_queue, cl_mem bu
     return ret;
 }
 
+cl_int WINAPI wine_clEnqueueReadBufferRect(cl_command_queue command_queue, cl_mem buffer, cl_bool blocking_read,
+                                           const size_t * buffer_origin, const size_t * host_origin, const size_t * region,
+                                           size_t buffer_row_pitch, size_t buffer_slice_pitch, size_t host_row_pitch, size_t host_slice_pitch,
+                                           void * ptr, cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event)
+{
+    cl_int ret;
+    TRACE("\n");
+    if (!pclEnqueueReadBufferRect) return CL_INVALID_VALUE;
+    ret = pclEnqueueReadBufferRect(command_queue, buffer, blocking_read,
+        buffer_origin, host_origin, region,
+        buffer_row_pitch, buffer_slice_pitch, host_row_pitch, host_slice_pitch,
+        ptr, num_events_in_wait_list, event_wait_list, event);
+    return ret;
+}
+
 cl_int WINAPI wine_clEnqueueWriteBuffer(cl_command_queue command_queue, cl_mem buffer, cl_bool blocking_write,
                                         size_t offset, size_t cb, const void * ptr,
                                         cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event)
@@ -1081,6 +1247,21 @@ cl_int WINAPI wine_clEnqueueWriteBuffer(cl_command_queue command_queue, cl_mem b
     return ret;
 }
 
+cl_int WINAPI wine_clEnqueueWriteBufferRect( cl_command_queue command_queue, cl_mem buffer, cl_bool blocking_read,
+                                            const size_t * buffer_origin, const size_t * host_origin, const size_t * region,
+                                            size_t buffer_row_pitch, size_t buffer_slice_pitch, size_t host_row_pitch, size_t host_slice_pitch,
+                                            const void * ptr, cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event)
+{
+    cl_int ret;
+    TRACE("\n");
+    if (!pclEnqueueWriteBufferRect) return CL_INVALID_VALUE;
+    ret = pclEnqueueWriteBufferRect(command_queue, buffer, blocking_read,
+        buffer_origin, host_origin, region,
+        buffer_row_pitch, buffer_slice_pitch, host_row_pitch, host_slice_pitch,
+        ptr, num_events_in_wait_list, event_wait_list, event);
+    return ret;
+}
+
 cl_int WINAPI wine_clEnqueueCopyBuffer(cl_command_queue command_queue, cl_mem src_buffer, cl_mem dst_buffer,
                                        size_t src_offset, size_t dst_offset, size_t cb,
                                        cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event)
@@ -1089,6 +1270,19 @@ cl_int WINAPI wine_clEnqueueCopyBuffer(cl_command_queue command_queue, cl_mem sr
     TRACE("\n");
     if (!pclEnqueueCopyBuffer) return CL_INVALID_VALUE;
     ret = pclEnqueueCopyBuffer(command_queue, src_buffer, dst_buffer, src_offset, dst_offset, cb, num_events_in_wait_list, event_wait_list, event);
+    return ret;
+}
+
+cl_int WINAPI wine_clEnqueueCopyBufferRect(cl_command_queue command_queue, cl_mem src_buffer, cl_mem dst_buffer,
+                                           const size_t * src_origin, const size_t * dst_origin, const size_t * region,
+                                           size_t src_row_pitch, size_t src_slice_pitch,
+                                           size_t dst_row_pitch, size_t dst_slice_pitch,
+                                           cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event * event)
+{
+    cl_int ret;
+    TRACE("\n");
+    if (!pclEnqueueCopyBufferRect) return CL_INVALID_VALUE;
+    ret = pclEnqueueCopyBufferRect(command_queue, src_buffer, dst_buffer, src_origin,  dst_origin, region, src_row_pitch, src_slice_pitch, dst_row_pitch, dst_slice_pitch, num_events_in_wait_list, event_wait_list, event);
     return ret;
 }
 
