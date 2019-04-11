@@ -5153,7 +5153,8 @@ static void test_mailslot_name(void)
     CloseHandle( device );
 }
 
-static INT build_reparse_buffer(const WCHAR *filename, ULONG tag, REPARSE_DATA_BUFFER **pbuffer)
+static INT build_reparse_buffer(const WCHAR *filename, ULONG tag, ULONG flags,
+                                REPARSE_DATA_BUFFER **pbuffer)
 {
     static INT header_size = offsetof(REPARSE_DATA_BUFFER, GenericReparseBuffer);
     INT buffer_size, struct_size, data_size, string_len, prefix_len;
@@ -5171,7 +5172,7 @@ static INT build_reparse_buffer(const WCHAR *filename, ULONG tag, REPARSE_DATA_B
     default:
         return 0;
     }
-    prefix_len = strlen("\\??\\");
+    prefix_len = (flags == SYMLINK_FLAG_RELATIVE) ? 0 : strlen("\\??\\");
     string_len = lstrlenW(&filename[prefix_len]);
     data_size = (prefix_len + 2 * string_len + 2) * sizeof(WCHAR);
     buffer_size = struct_size + data_size;
@@ -5191,6 +5192,7 @@ static INT build_reparse_buffer(const WCHAR *filename, ULONG tag, REPARSE_DATA_B
         buffer->SymbolicLinkReparseBuffer.SubstituteNameLength = (prefix_len + string_len) * sizeof(WCHAR);
         buffer->SymbolicLinkReparseBuffer.PrintNameOffset = (prefix_len + string_len + 1) * sizeof(WCHAR);
         buffer->SymbolicLinkReparseBuffer.PrintNameLength = string_len * sizeof(WCHAR);
+        buffer->SymbolicLinkReparseBuffer.Flags = flags;
         subst_dest = &buffer->SymbolicLinkReparseBuffer.PathBuffer[0];
         print_dest = &buffer->SymbolicLinkReparseBuffer.PathBuffer[prefix_len + string_len + 1];
         break;
@@ -5273,7 +5275,7 @@ static void test_reparse_points(void)
     }
     dwret = NtQueryInformationFile(handle, &iosb, &old_attrib, sizeof(old_attrib), FileBasicInformation);
     ok(dwret == STATUS_SUCCESS, "Failed to get junction point folder's attributes (0x%x).\n", dwret);
-    buffer_len = build_reparse_buffer(nameW.Buffer, IO_REPARSE_TAG_MOUNT_POINT, &buffer);
+    buffer_len = build_reparse_buffer(nameW.Buffer, IO_REPARSE_TAG_MOUNT_POINT, 0, &buffer);
     bret = DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
     ok(bret, "Failed to create junction point! (0x%x)\n", GetLastError());
 
@@ -5314,7 +5316,7 @@ static void test_reparse_points(void)
     HeapFree(GetProcessHeap(), 0, buffer);
     handle = CreateFileW(reparse_path, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING,
                             FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0);
-    buffer_len = build_reparse_buffer(nameW.Buffer, IO_REPARSE_TAG_MOUNT_POINT, &buffer);
+    buffer_len = build_reparse_buffer(nameW.Buffer, IO_REPARSE_TAG_MOUNT_POINT, 0, &buffer);
     bret = DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
     ok(bret, "Failed to create junction point! (0x%x)\n", GetLastError());
     CloseHandle(handle);
@@ -5329,7 +5331,7 @@ static void test_reparse_points(void)
     ok(bret, "Failed to create junction point target directory.\n");
     handle = CreateFileW(reparse_path, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING,
                          FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0);
-    buffer_len = build_reparse_buffer(nameW.Buffer, IO_REPARSE_TAG_MOUNT_POINT, &buffer);
+    buffer_len = build_reparse_buffer(nameW.Buffer, IO_REPARSE_TAG_MOUNT_POINT, 0, &buffer);
     bret = DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
     ok(bret, "Failed to create junction point! (0x%x)\n", GetLastError());
     CloseHandle(handle);
@@ -5391,7 +5393,7 @@ static void test_reparse_points(void)
     }
     dwret = NtQueryInformationFile(handle, &iosb, &old_attrib, sizeof(old_attrib), FileBasicInformation);
     ok(dwret == STATUS_SUCCESS, "Failed to get symlink folder's attributes (0x%x).\n", dwret);
-    buffer_len = build_reparse_buffer(nameW.Buffer, IO_REPARSE_TAG_SYMLINK, &buffer);
+    buffer_len = build_reparse_buffer(nameW.Buffer, IO_REPARSE_TAG_SYMLINK, 0, &buffer);
     bret = DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
     ok(bret, "Failed to create symlink! (0x%x)\n", GetLastError());
 
@@ -5427,6 +5429,22 @@ static void test_reparse_points(void)
     ok(old_attrib.LastAccessTime.QuadPart == new_attrib.LastAccessTime.QuadPart,
        "Symlink folder's access time does not match.\n");
     CloseHandle(handle);
+
+    /* Create a relative directory symlink */
+    HeapFree(GetProcessHeap(), 0, buffer);
+    handle = CreateFileW(reparse_path, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING,
+                         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0);
+    if (handle == INVALID_HANDLE_VALUE)
+    {
+        win_skip("Failed to open symlink directory handle (0x%x).\n", GetLastError());
+        goto cleanup;
+    }
+    dwret = NtQueryInformationFile(handle, &iosb, &old_attrib, sizeof(old_attrib), FileBasicInformation);
+    ok(dwret == STATUS_SUCCESS, "Failed to get symlink folder's attributes (0x%x).\n", dwret);
+    buffer_len = build_reparse_buffer(targetW, IO_REPARSE_TAG_SYMLINK, SYMLINK_FLAG_RELATIVE, &buffer);
+    bret = DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
+    CloseHandle(handle);
+    ok(bret, "Failed to create symlink! (0x%x)\n", GetLastError());
 
 cleanup:
     /* Cleanup */
