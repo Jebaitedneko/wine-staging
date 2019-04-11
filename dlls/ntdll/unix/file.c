@@ -5973,6 +5973,7 @@ NTSTATUS create_reparse_point(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
     int relative_offset = 0;
     UNICODE_STRING nt_dest;
     int dest_len, offset;
+    BOOL is_dir = TRUE;
     NTSTATUS status;
     struct stat st;
     WCHAR *dest;
@@ -6106,7 +6107,6 @@ NTSTATUS create_reparse_point(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
     /* Encode the type (file or directory) if NT symlink */
     if (buffer->ReparseTag == IO_REPARSE_TAG_SYMLINK)
     {
-        BOOL is_dir;
         if (fstat( dest_fd, &st ) == -1)
         {
             status = errno_to_status( errno );
@@ -6140,8 +6140,11 @@ NTSTATUS create_reparse_point(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
     /* Atomically move the link into position */
     if (!renameat2( -1, tmplink, -1, unix_src, RENAME_EXCHANGE ))
     {
-        /* success: link and folder have switched locations */
-        rmdir( tmplink ); /* remove the folder (at link location) */
+        /* success: link and folder/file have switched locations */
+        if (is_dir)
+            rmdir( tmplink ); /* remove the folder (at link location) */
+        else
+            unlink( tmplink ); /* remove the file (at link location) */
     }
     else if (errno == ENOSYS)
     {
@@ -6360,6 +6363,7 @@ NTSTATUS remove_reparse_point(HANDLE handle, REPARSE_GUID_DATA_BUFFER *buffer)
     char tmpdir[PATH_MAX], tmpfile[PATH_MAX], *d;
     BOOL tempdir_created = FALSE;
     int dest_fd, needs_close;
+    BOOL is_dir = TRUE;
     NTSTATUS status;
     char *unix_name;
     struct stat st;
@@ -6372,12 +6376,13 @@ NTSTATUS remove_reparse_point(HANDLE handle, REPARSE_GUID_DATA_BUFFER *buffer)
 
     TRACE( "Deleting symlink %s\n", unix_name );
 
-    /* Produce the directory in a temporary location in the same folder */
+    /* Produce the file/directory in a temporary location in the same folder */
     if (fstat( dest_fd, &st ) == -1)
     {
         status = errno_to_status( errno );
         goto cleanup;
     }
+    is_dir = S_ISDIR(st.st_mode);
     strcpy( tmpdir, unix_name );
     d = dirname( tmpdir);
     if (d != tmpdir) strcpy( tmpdir, d );
@@ -6390,10 +6395,20 @@ NTSTATUS remove_reparse_point(HANDLE handle, REPARSE_GUID_DATA_BUFFER *buffer)
     tempdir_created = TRUE;
     strcpy( tmpfile, tmpdir );
     strcat( tmpfile, "/tmpfile" );
-    if (mkdir( tmpfile, st.st_mode ))
+    if (is_dir && mkdir( tmpfile, st.st_mode ))
     {
         status = errno_to_status( errno );
         goto cleanup;
+    }
+    else if (!is_dir)
+    {
+        int fd = open( tmpfile, O_CREAT|O_WRONLY|O_TRUNC, st.st_mode );
+        if (fd < 0)
+            {
+            status = errno_to_status( errno );
+            goto cleanup;
+        }
+        close( fd );
     }
     /* attemp to retain the ownership (if possible) */
     lchown( tmpfile, st.st_uid, st.st_gid );
