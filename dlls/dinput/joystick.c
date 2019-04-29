@@ -861,7 +861,7 @@ HRESULT WINAPI JoystickWGenericImpl_BuildActionMap(LPDIRECTINPUTDEVICE8W iface,
         else
             lstrcpynW(username, lpszUserName, size);
 
-        load_success = load_mapping_settings((IDirectInputDeviceImpl *) This, lpdiaf, username);
+        load_success = load_mapping_settings(&This->base, lpdiaf, username);
         heap_free(username);
     }
 
@@ -970,6 +970,8 @@ HRESULT WINAPI JoystickAGenericImpl_SetActionMap(LPDIRECTINPUTDEVICE8A iface,
     }
 
     hr = JoystickWGenericImpl_SetActionMap(&This->base.IDirectInputDevice8W_iface, &diafW, lpszUserNameW, dwFlags);
+
+    lpdiaf->dwCRC = diafW.dwCRC;
 
     HeapFree(GetProcessHeap(), 0, diafW.rgoAction);
     HeapFree(GetProcessHeap(), 0, lpszUserNameW);
