@@ -28,8 +28,10 @@
 
 #include <stdio.h>
 
+#include "device_private.h"
 #include "joystick_private.h"
 #include "wine/debug.h"
+#include "wine/heap.h"
 #include "winreg.h"
 
 WINE_DEFAULT_DEBUG_CHANNEL(dinput);
@@ -839,8 +841,31 @@ HRESULT WINAPI JoystickWGenericImpl_BuildActionMap(LPDIRECTINPUTDEVICE8W iface,
     JoystickGenericImpl *This = impl_from_IDirectInputDevice8W(iface);
     unsigned int i, j;
     BOOL has_actions = FALSE;
+    WCHAR *username;
+    DWORD size;
+    BOOL load_success = FALSE;
 
     FIXME("(%p)->(%p,%s,%08x): semi-stub !\n", This, lpdiaf, debugstr_w(lpszUserName), dwFlags);
+
+    /* Unless asked the contrary by these flags, try to load a previous mapping */
+    if (!(dwFlags & DIDBAM_HWDEFAULTS))
+    {
+        if (!lpszUserName)
+            GetUserNameW(NULL, &size);
+        else
+            size = lstrlenW(lpszUserName) + 1;
+
+        username = heap_alloc(size * sizeof(WCHAR));
+        if (!lpszUserName)
+            GetUserNameW(username, &size);
+        else
+            lstrcpynW(username, lpszUserName, size);
+
+        load_success = load_mapping_settings((IDirectInputDeviceImpl *) This, lpdiaf, username);
+        heap_free(username);
+    }
+
+    if (load_success) return DI_OK;
 
     for (i=0; i < lpdiaf->dwNumActions; i++)
     {
