@@ -39,6 +39,7 @@
 #define NONAMELESSUNION
 
 #include "wine/debug.h"
+#include "wine/heap.h"
 #include "wine/unicode.h"
 #include "wine/asm.h"
 #include "windef.h"
@@ -1322,9 +1323,34 @@ static HRESULT WINAPI IDirectInput8AImpl_ConfigureDevices(
 
     /* Copy parameters */
     diCDParamsW.dwSize = sizeof(DICONFIGUREDEVICESPARAMSW);
+    diCDParamsW.dwcUsers = lpdiCDParams->dwcUsers;
     diCDParamsW.dwcFormats = lpdiCDParams->dwcFormats;
     diCDParamsW.lprgFormats = &diafW;
     diCDParamsW.hwnd = lpdiCDParams->hwnd;
+    diCDParamsW.lptszUserNames = NULL;
+
+    if (lpdiCDParams->lptszUserNames) {
+        char *start = lpdiCDParams->lptszUserNames;
+        WCHAR *to = NULL;
+        int total_len = 0;
+        for (i = 0; i < lpdiCDParams->dwcUsers; i++)
+        {
+            char *end = start + 1;
+            int len;
+            while (*(end++));
+            len = MultiByteToWideChar(CP_ACP, 0, start, end - start, NULL, 0);
+            total_len += len + 2; /* length of string and two null char */
+            if (to)
+                to = HeapReAlloc(GetProcessHeap(), 0, to, sizeof(WCHAR) * total_len);
+            else
+                to = HeapAlloc(GetProcessHeap(), 0, sizeof(WCHAR) * total_len);
+
+            MultiByteToWideChar(CP_ACP, 0, start, end - start, to + (total_len - len - 2), len);
+            to[total_len] = 0;
+            to[total_len - 1] = 0;
+        }
+        diCDParamsW.lptszUserNames = to;
+    }
 
     diafW.rgoAction = HeapAlloc(GetProcessHeap(), 0, sizeof(DIACTIONW)*lpdiCDParams->lprgFormats->dwNumActions);
     _copy_diactionformatAtoW(&diafW, lpdiCDParams->lprgFormats);
@@ -1351,6 +1377,8 @@ static HRESULT WINAPI IDirectInput8AImpl_ConfigureDevices(
         HeapFree(GetProcessHeap(), 0, (void*) diafW.rgoAction[i].u.lptszActionName);
 
     HeapFree(GetProcessHeap(), 0, diafW.rgoAction);
+
+    heap_free((void*) diCDParamsW.lptszUserNames);
 
     return hr;
 }
