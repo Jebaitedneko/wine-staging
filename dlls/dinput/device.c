@@ -714,7 +714,7 @@ static HRESULT save_mapping_settings(IDirectInputDevice8W *iface, LPDIACTIONFORM
     return DI_OK;
 }
 
-static BOOL load_mapping_settings(IDirectInputDeviceImpl *This, LPDIACTIONFORMATW lpdiaf, const WCHAR *username)
+BOOL load_mapping_settings(IDirectInputDeviceImpl *This, LPDIACTIONFORMATW lpdiaf, const WCHAR *username)
 {
     HKEY hkey;
     WCHAR *guid_str;
