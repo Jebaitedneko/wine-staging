@@ -322,6 +322,20 @@ static void _dump_EnumDevices_dwFlags(DWORD dwFlags)
     TRACE("\n");
 }
 
+static const char *dump_semantic(DWORD semantic)
+{
+    if((semantic & 0xff000000) == 0xff000000)
+        return "Any AXIS";
+    else if((semantic & 0x82000000) == 0x82000000)
+        return "Mouse";
+    else if((semantic & 0x81000000) == 0x81000000)
+        return "Keybaord";
+    else if((semantic & DIVIRTUAL_FLYING_HELICOPTER) == DIVIRTUAL_FLYING_HELICOPTER)
+        return "Helicopter";
+
+    return "Unknown";
+}
+
 static void _dump_diactionformatA(LPDIACTIONFORMATA lpdiActionFormat)
 {
     unsigned int i;
@@ -344,7 +358,7 @@ static void _dump_diactionformatA(LPDIACTIONFORMATA lpdiActionFormat)
     {
         TRACE("diaf.rgoAction[%u]:\n", i);
         TRACE("\tuAppData=0x%lx\n", lpdiActionFormat->rgoAction[i].uAppData);
-        TRACE("\tdwSemantic=0x%08x\n", lpdiActionFormat->rgoAction[i].dwSemantic);
+        TRACE("\tdwSemantic=0x%08x (%s)\n", lpdiActionFormat->rgoAction[i].dwSemantic, dump_semantic(lpdiActionFormat->rgoAction[i].dwSemantic));
         TRACE("\tdwFlags=0x%x\n", lpdiActionFormat->rgoAction[i].dwFlags);
         TRACE("\tszActionName=%s\n", debugstr_a(lpdiActionFormat->rgoAction[i].u.lptszActionName));
         TRACE("\tguidInstance=%s\n", debugstr_guid(&lpdiActionFormat->rgoAction[i].guidInstance));
