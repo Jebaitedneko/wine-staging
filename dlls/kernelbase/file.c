@@ -1506,6 +1506,30 @@ BOOL WINAPI DECLSPEC_HOTPATCH FindNextFileW( HANDLE handle, WIN32_FIND_DATAW *da
         memcpy( data->cFileName, dir_info->FileName, dir_info->FileNameLength );
         data->cFileName[dir_info->FileNameLength/sizeof(WCHAR)] = 0;
 
+        /* get reparse tag */
+        if (dir_info->FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
+        {
+            INT path_len = info->path.Length + dir_info->FileNameLength + sizeof(WCHAR);
+            WCHAR *path = HeapAlloc( GetProcessHeap(), HEAP_ZERO_MEMORY, path_len );
+            FILE_ATTRIBUTE_TAG_INFORMATION taginfo;
+            IO_STATUS_BLOCK iosb;
+            NTSTATUS status;
+            HANDLE hlink;
+
+            if (!path) break;
+
+            lstrcpynW( path, info->path.Buffer, info->path.Length/sizeof(WCHAR) + 1 );
+            lstrcatW( path, data->cFileName );
+
+            hlink = CreateFileW( path, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING,
+                                 FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0 );
+            HeapFree( GetProcessHeap(), 0, path );
+            status = NtQueryInformationFile( hlink, &iosb, &taginfo, sizeof(taginfo),
+                                             FileAttributeTagInformation );
+            if (status == STATUS_SUCCESS) data->dwReserved0 = taginfo.ReparseTag;
+            CloseHandle( hlink );
+        }
+
         if (info->level != FindExInfoBasic)
         {
             memcpy( data->cAlternateFileName, dir_info->ShortName, dir_info->ShortNameLength );
