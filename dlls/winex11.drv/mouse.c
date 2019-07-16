@@ -365,6 +365,9 @@ static void update_relative_valuators(XIAnyClassInfo **valuators, int n_valuator
         thread_data->x_pos_valuator.min = thread_data->x_pos_valuator.max = 0;
     if (thread_data->y_pos_valuator.min >= thread_data->y_pos_valuator.max)
         thread_data->y_pos_valuator.min = thread_data->y_pos_valuator.max = 0;
+
+    thread_data->x_pos_valuator.value = 0;
+    thread_data->y_pos_valuator.value = 0;
 }
 #endif
 
@@ -1924,6 +1927,7 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
     double dx = 0, dy = 0, val;
     double raw_dx = 0, raw_dy = 0, raw_val;
     double x_scale = 1, y_scale = 1;
+    double x_accum = 0, y_accum = 0;
     struct x11drv_thread_data *thread_data = x11drv_thread_data();
     XIValuatorClassInfo *x_pos, *y_pos;
 
@@ -1934,6 +1938,9 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
 
     x_pos = &thread_data->x_pos_valuator;
     y_pos = &thread_data->y_pos_valuator;
+
+    x_accum = x_pos->value;
+    y_accum = y_pos->value;
 
     input.type             = INPUT_MOUSE;
     input.u.mi.mouseData   = 0;
@@ -1962,9 +1969,9 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
             raw_dx = raw_val;
             input.u.mi.dwFlags |= (x_pos->mode == XIModeAbsolute ? MOUSEEVENTF_ABSOLUTE : 0);
             if (x_pos->mode == XIModeAbsolute)
-                input.u.mi.dx = (dx - x_pos->min) * x_scale;
+                x_accum = (dx - x_pos->min) * x_scale;
             else
-                input.u.mi.dx = dx * x_scale;
+                x_accum += dx * x_scale;
         }
         if (i == y_pos->number)
         {
@@ -1972,17 +1979,29 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
             raw_dy = raw_val;
             input.u.mi.dwFlags |= (y_pos->mode == XIModeAbsolute ? MOUSEEVENTF_ABSOLUTE : 0);
             if (y_pos->mode == XIModeAbsolute)
-                input.u.mi.dy = (dy - y_pos->min) * y_scale;
+                y_accum = (dy - y_pos->min) * y_scale;
             else
-                input.u.mi.dy = dy * y_scale;
+                y_accum += dy * y_scale;
         }
     }
+
+    /* Accumulate the fractional parts so they aren't lost after casting
+     * successive motion values to integral fields.
+     *
+     * Note: It looks like raw_dx, raw_dy are already
+     * integral values but that may be wrong.
+     */
+    input.u.mi.dx = (LONG)x_accum;
+    input.u.mi.dy = (LONG)y_accum;
 
     if (broken_rawevents && is_old_motion_event( xev->serial ))
     {
         TRACE( "pos %d,%d old serial %lu, ignoring\n", input.u.mi.dx, input.u.mi.dy, xev->serial );
         return FALSE;
     }
+
+    x_pos->value = x_accum - input.u.mi.dx;
+    y_pos->value = y_accum - input.u.mi.dy;
 
     if (x_pos->mode == XIModeAbsolute)
     {
@@ -1991,14 +2010,21 @@ static BOOL X11DRV_RawMotion( XGenericEventCookie *xev )
     }
     else if (!thread_data->xi2_rawinput_only)
     {
-        TRACE( "pos %d,%d (event %f,%f)\n", input.u.mi.dx, input.u.mi.dy, dx, dy );
-        __wine_send_input( 0, &input, SEND_HWMSG_WINDOW );
+        if ((dy || dy) && !(input.u.mi.dx || input.u.mi.dy))
+        {
+            TRACE( "accumulating raw motion (event %f,%f accum %f,%f)\n", dx, dy, x_pos->value, y_pos->value );
+        }
+        else
+        {
+            TRACE( "pos %d,%d (event %f,%f)\n", input.u.mi.dx, input.u.mi.dy, dx, dy );
+            __wine_send_input( 0, &input, SEND_HWMSG_WINDOW );
+        }
     }
     else
     {
         input.u.mi.dx = raw_dx;
         input.u.mi.dy = raw_dy;
-        TRACE( "raw pos %d,%d (event %f,%f)\n", input.u.mi.dx, input.u.mi.dy, dx, dy );
+        TRACE( "raw pos %d,%d (event %f,%f)\n", input.u.mi.dx, input.u.mi.dy, raw_dx, raw_dy );
         __wine_send_input( 0, &input, SEND_HWMSG_RAWINPUT );
     }
     return TRUE;
