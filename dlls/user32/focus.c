@@ -31,7 +31,6 @@
 #include "user_private.h"
 #include "wine/server.h"
 
-
 /*******************************************************************
  *		FOCUS_MouseActivate
  *
