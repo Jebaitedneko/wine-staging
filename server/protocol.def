@@ -317,6 +317,13 @@ struct hardware_msg_data
             int            y;       /* y coordinate */
             unsigned int   data;    /* mouse data */
         } mouse;
+        struct
+        {
+            int            type;    /* RIM_TYPEHID */
+            obj_handle_t   device;
+            unsigned int   length;  /* HID report length */
+            /* followed by length bytes of HID report data  */
+        } hid;
     } rawinput;
 };
 
@@ -340,7 +347,7 @@ typedef union
     int type;
     struct
     {
-        int            type;    /* INPUT_KEYBOARD */
+        int            type;    /* HW_INPUT_KEYBOARD */
         unsigned short vkey;    /* virtual key code */
         unsigned short scan;    /* scan code */
         unsigned int   flags;   /* event flags */
@@ -349,7 +356,7 @@ typedef union
     } kbd;
     struct
     {
-        int            type;    /* INPUT_MOUSE */
+        int            type;    /* HW_INPUT_MOUSE */
         int            x;       /* coordinates */
         int            y;
         unsigned int   data;    /* mouse data */
@@ -359,11 +366,23 @@ typedef union
     } mouse;
     struct
     {
-        int            type;    /* INPUT_HARDWARE */
+        int            type;    /* HW_INPUT_HARDWARE */
         unsigned int   msg;     /* message code */
         lparam_t       lparam;  /* message param */
     } hw;
+    struct
+    {
+        int            type;    /* HW_INPUT_HID */
+        obj_handle_t   device;
+        unsigned char  usage_page;
+        unsigned char  usage;
+        unsigned int   length;
+    } hid;
 } hw_input_t;
+#define HW_INPUT_MOUSE    0
+#define HW_INPUT_KEYBOARD 1
+#define HW_INPUT_HARDWARE 2
+#define HW_INPUT_HID      3
 
 typedef union
 {
@@ -2007,6 +2026,7 @@ enum message_type
     user_handle_t   win;       /* window handle */
     hw_input_t      input;     /* input data */
     unsigned int    flags;     /* flags (see below) */
+    VARARG(data,bytes);        /* hid report data */
 @REPLY
     int             wait;      /* do we need to wait for a reply? */
     int             prev_x;    /* previous cursor position */
