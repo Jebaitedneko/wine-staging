@@ -514,6 +514,16 @@ HKCR,MIME\Database\Charset\us-ascii,"AliasForCharset",,iso-8859-1
 HKCR,MIME\Database\Charset\visual,"AliasForCharset",,iso-8859-8
 HKCR,MIME\Database\Charset\Windows-1254,"AliasForCharset",,iso-8859-9
 
+HKCU,Software\Wine\FileOpenBlacklist\.htm,"winebrowser",,"""%11%\winebrowser.exe"" -nohome"
+HKCU,Software\Wine\FileOpenBlacklist\.html,"winebrowser",,"""%11%\winebrowser.exe"" -nohome"
+HKCU,Software\Wine\FileOpenBlacklist\.ini,"notepad",,"%11%\notepad.exe %1"
+HKCU,Software\Wine\FileOpenBlacklist\.pdf,"winebrowser",,"""%11%\winebrowser.exe"" -nohome"
+HKCU,Software\Wine\FileOpenBlacklist\.rtf,"wordpad",,"""%16422%\Windows NT\Accessories\wordpad.exe"" %1"
+HKCU,Software\Wine\FileOpenBlacklist\.txt,"notepad",,"%11%\notepad.exe %1"
+HKCU,Software\Wine\FileOpenBlacklist\.url,"ieframe",,"rundll32.exe ieframe.dll,OpenURL %l"
+HKCU,Software\Wine\FileOpenBlacklist\.wri,"wordpad",,"""%16422%\Windows NT\Accessories\wordpad.exe"" %1"
+HKCU,Software\Wine\FileOpenBlacklist\.xml,"winebrowser",,"""%11%\winebrowser.exe"" -nohome"
+
 [ContentIndex]
 HKLM,System\CurrentControlSet\Control\ContentIndex\Language\Neutral,"WBreakerClass",,"{369647e0-17b0-11ce-9950-00aa004bbb1f}"
 HKLM,System\CurrentControlSet\Control\ContentIndex\Language\Neutral,"StemmerClass",,""
