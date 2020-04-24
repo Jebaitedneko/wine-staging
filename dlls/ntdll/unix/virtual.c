@@ -101,6 +101,7 @@ struct file_view
 #define VPROT_GUARD      0x10
 #define VPROT_COMMITTED  0x20
 #define VPROT_WRITEWATCH 0x40
+#define VPROT_WRITTEN    0x80
 /* per-mapping protection flags */
 #define VPROT_SYSTEM     0x0200  /* system view (underlying mmap not under our control) */
 #define VPROT_NATIVE     0x0400
@@ -871,7 +872,7 @@ static int get_unix_prot( BYTE vprot )
 #if defined(__i386__)
         if (vprot & VPROT_WRITECOPY)
         {
-            if (experimental_WRITECOPY())
+            if (experimental_WRITECOPY() && !(vprot & VPROT_WRITTEN))
                 prot = (prot & ~PROT_WRITE) | PROT_READ;
             else
                 prot |= PROT_WRITE | PROT_READ;
@@ -1315,7 +1316,11 @@ static NTSTATUS create_view( struct file_view **view_ret, void *base, size_t siz
  */
 static DWORD get_win32_prot( BYTE vprot, unsigned int map_prot )
 {
-    DWORD ret = VIRTUAL_Win32Flags[vprot & 0x0f];
+    DWORD ret;
+
+    if ((vprot & VPROT_WRITECOPY) && (vprot & VPROT_WRITTEN))
+        vprot = (vprot & ~VPROT_WRITECOPY) | VPROT_WRITE;
+    ret = VIRTUAL_Win32Flags[vprot & 0x0f];
     if (vprot & VPROT_GUARD) ret |= PAGE_GUARD;
     if (map_prot & SEC_NOCACHE) ret |= PAGE_NOCACHE;
     return ret;
@@ -1426,7 +1431,7 @@ static BOOL set_vprot( struct file_view *view, void *base, size_t size, BYTE vpr
     if (view->protect & VPROT_WRITEWATCH)
     {
         /* each page may need different protections depending on write watch flag */
-        set_page_vprot_bits( base, size, vprot & ~VPROT_WRITEWATCH, ~vprot & ~VPROT_WRITEWATCH );
+        set_page_vprot_bits( base, size, vprot & ~VPROT_WRITEWATCH, ~vprot & ~(VPROT_WRITEWATCH|VPROT_WRITTEN) );
         mprotect_range( base, size, 0, 0 );
         return TRUE;
     }
@@ -1442,10 +1447,18 @@ static BOOL set_vprot( struct file_view *view, void *base, size_t size, BYTE vpr
         return TRUE;
     }
 
+    /* check that we can map this memory with PROT_WRITE since we cannot fail later */
+    if (vprot & VPROT_WRITECOPY)
+        unix_prot |= PROT_WRITE;
+
     if (mprotect_exec( base, size, unix_prot )) /* FIXME: last error */
         return FALSE;
 
-    set_page_vprot( base, size, vprot );
+    /* each page may need different protections depending on writecopy */
+    set_page_vprot_bits( base, size, vprot, ~vprot & ~VPROT_WRITTEN );
+    if (vprot & VPROT_WRITECOPY)
+        mprotect_range( base, size, 0, 0 );
+
     return TRUE;
 }
 
@@ -2985,7 +2998,7 @@ NTSTATUS virtual_handle_fault( void *addr, DWORD err, void *stack )
         }
         if (vprot & VPROT_WRITECOPY)
         {
-            set_page_vprot_bits( page, page_size, VPROT_WRITE, VPROT_WRITECOPY );
+            set_page_vprot_bits( page, page_size, VPROT_WRITE | VPROT_WRITTEN, VPROT_WRITECOPY );
             mprotect_range( page, page_size, 0, 0 );
         }
         /* ignore fault if page is writable now */
@@ -3903,7 +3916,7 @@ static NTSTATUS get_basic_memory_info( HANDLE process, LPCVOID addr,
         else if (view->protect & (SEC_FILE | SEC_RESERVE | SEC_COMMIT)) info->Type = MEM_MAPPED;
         else info->Type = MEM_PRIVATE;
         for (ptr = base; ptr < base + range_size; ptr += page_size)
-            if ((get_page_vprot( ptr ) ^ vprot) & ~VPROT_WRITEWATCH) break;
+            if ((get_page_vprot( ptr ) ^ vprot) & ~(VPROT_WRITEWATCH|VPROT_WRITTEN)) break;
         info->RegionSize = ptr - base;
     }
     server_leave_uninterrupted_section( &virtual_mutex, &sigset );
