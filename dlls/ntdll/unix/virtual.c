@@ -2258,6 +2258,8 @@ static NTSTATUS map_image_into_view( struct file_view *view, int fd, void *orig_
                            ptr + sec->VirtualAddress + file_size,
                            ptr + sec->VirtualAddress + end );
             memset( ptr + sec->VirtualAddress + file_size, 0, end - file_size );
+            /* clear WRITTEN mark so QueryVirtualMemory returns correct values */
+            set_page_vprot_bits( ptr + sec->VirtualAddress + file_size, 1, 0, VPROT_WRITTEN );
         }
     }
 
@@ -3962,7 +3964,7 @@ static NTSTATUS get_working_set_ex( HANDLE process, LPCVOID addr,
                 (vprot & VPROT_COMMITTED))
         {
             p->VirtualAttributes.Valid = !(vprot & VPROT_GUARD) && (vprot & 0x0f) && (pagemap >> 63);
-            p->VirtualAttributes.Shared = !is_view_valloc( view ) && ((pagemap >> 61) & 1);
+            p->VirtualAttributes.Shared = (!is_view_valloc( view ) && ((pagemap >> 61) & 1)) || ((view->protect & VPROT_WRITECOPY) && !(vprot & VPROT_WRITTEN));
             if (p->VirtualAttributes.Shared && p->VirtualAttributes.Valid)
                 p->VirtualAttributes.ShareCount = 1; /* FIXME */
             if (p->VirtualAttributes.Valid)
