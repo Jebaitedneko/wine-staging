@@ -869,7 +869,7 @@ static int get_unix_prot( BYTE vprot )
         if (vprot & VPROT_READ) prot |= PROT_READ;
         if (vprot & VPROT_WRITE) prot |= PROT_WRITE | PROT_READ;
         if (vprot & VPROT_EXEC) prot |= PROT_EXEC | PROT_READ;
-#if defined(__i386__)
+#if defined(__i386__) || defined(__x86_64__)
         if (vprot & VPROT_WRITECOPY)
         {
             if (experimental_WRITECOPY() && !(vprot & VPROT_WRITTEN))
