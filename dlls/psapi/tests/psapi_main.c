@@ -804,6 +804,8 @@ static void test_QueryWorkingSetEx(void)
     DWORD prot;
     BOOL ret;
 
+    static char tmp_data[0x2000] = { 0x41 };
+
     if (pQueryWorkingSetEx == NULL)
     {
         win_skip("QueryWorkingSetEx not found, skipping tests\n");
@@ -822,6 +824,9 @@ static void test_QueryWorkingSetEx(void)
     check_QueryWorkingSetEx(addr, "exe,readonly1", 0, 0, 1, TRUE);
 
     *(volatile char *)addr;
+    check_QueryWorkingSetEx(addr, "exe,readonly2", 1, PAGE_READONLY, 1, FALSE);
+
+    ret = VirtualProtect(addr, 0x1000, PAGE_EXECUTE_READWRITE, &prot);
     ok(ret, "VirtualProtect failed with %d\n", GetLastError());
     check_QueryWorkingSetEx(addr, "exe,readonly2", 1, PAGE_READONLY, 1, FALSE);
 
