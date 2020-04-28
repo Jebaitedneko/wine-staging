@@ -1447,8 +1447,9 @@ static BOOL set_vprot( struct file_view *view, void *base, size_t size, BYTE vpr
         return TRUE;
     }
 
-    /* check that we can map this memory with PROT_WRITE since we cannot fail later */
-    if (vprot & VPROT_WRITECOPY)
+    /* check that we can map this memory with PROT_WRITE since we cannot fail later,
+     * but we fallback to copying pages for read-only mappings in virtual_handle_fault */
+    if ((vprot & VPROT_WRITECOPY) && (view->protect & VPROT_WRITECOPY))
         unix_prot |= PROT_WRITE;
 
     if (mprotect_exec( base, size, unix_prot )) /* FIXME: last error */
@@ -2993,10 +2994,26 @@ NTSTATUS virtual_handle_fault( void *addr, DWORD err, void *stack )
             set_page_vprot_bits( page, page_size, 0, VPROT_WRITEWATCH );
             mprotect_range( page, page_size, 0, 0 );
         }
-        if (vprot & VPROT_WRITECOPY)
+        if ((vprot & VPROT_WRITECOPY) && (vprot & VPROT_COMMITTED))
         {
+            struct file_view *view = find_view( page, 0 );
+
             set_page_vprot_bits( page, page_size, VPROT_WRITE | VPROT_WRITTEN, VPROT_WRITECOPY );
-            mprotect_range( page, page_size, 0, 0 );
+            if (view->protect & VPROT_WRITECOPY)
+            {
+                mprotect_range( page, page_size, 0, 0 );
+            }
+            else
+            {
+                static BYTE *temp_page = NULL;
+                if (!temp_page)
+                    temp_page = anon_mmap_alloc( page_size, PROT_READ | PROT_WRITE );
+
+                /* original mapping is shared, replace with a private page */
+                memcpy( temp_page, page, page_size );
+                anon_mmap_fixed( page, page_size, get_unix_prot( vprot | VPROT_WRITE | VPROT_WRITTEN ), 0 );
+                memcpy( page, temp_page, page_size );
+            }
         }
         /* ignore fault if page is writable now */
         if (get_unix_prot( get_page_vprot( page ) ) & PROT_WRITE) ret = STATUS_SUCCESS;
