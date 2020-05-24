@@ -904,6 +904,7 @@
 @ stub RtlQueryPropertyNames
 @ stub RtlQueryPropertySet
 @ stdcall RtlQueryRegistryValues(long ptr ptr ptr ptr)
+@ stdcall RtlQueryRegistryValuesEx(long ptr ptr ptr ptr)
 @ stub RtlQuerySecurityObject
 @ stub RtlQueryTagHeap
 @ stdcall RtlQueryTimeZoneInformation(ptr)
