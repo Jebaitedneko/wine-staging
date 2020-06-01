@@ -7487,9 +7487,24 @@ static void STDMETHODCALLTYPE d3d11_device_GetImmediateContext1(ID3D11Device2 *i
 static HRESULT STDMETHODCALLTYPE d3d11_device_CreateDeferredContext1(ID3D11Device2 *iface, UINT flags,
         ID3D11DeviceContext1 **context)
 {
-    FIXME("iface %p, flags %#x, context %p stub!\n", iface, flags, context);
+    struct d3d11_deferred_context *object;
 
-    return E_NOTIMPL;
+    TRACE("iface %p, flags %#x, context %p.\n", iface, flags, context);
+
+    if (!(object = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(*object))))
+        return E_OUTOFMEMORY;
+
+    object->ID3D11DeviceContext1_iface.lpVtbl = &d3d11_deferred_context_vtbl;
+    object->device = (ID3D11Device *)iface;
+    object->refcount = 1;
+
+    list_init(&object->commands);
+
+    ID3D11Device2_AddRef(iface);
+    wined3d_private_store_init(&object->private_store);
+
+    return ID3D11DeviceContext1_QueryInterface(&object->ID3D11DeviceContext1_iface,
+            &IID_ID3D11DeviceContext, (void**)context);
 }
 
 static HRESULT STDMETHODCALLTYPE d3d11_device_CreateBlendState1(ID3D11Device2 *iface,
