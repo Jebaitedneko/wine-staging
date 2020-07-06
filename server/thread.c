@@ -1326,6 +1326,8 @@ void kill_thread( struct thread *thread, int violent_death )
     }
     kill_console_processes( thread, 0 );
     abandon_mutexes( thread );
+    if (do_esync())
+        esync_abandon_mutexes( thread );
     if (violent_death)
     {
         send_thread_signal( thread, SIGQUIT );
