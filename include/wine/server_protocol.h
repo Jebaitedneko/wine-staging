@@ -5381,6 +5381,25 @@ struct create_esync_reply
     char __pad_20[4];
 };
 
+struct open_esync_request
+{
+    struct request_header __header;
+    unsigned int access;
+    unsigned int attributes;
+    obj_handle_t rootdir;
+    int          type;
+    /* VARARG(name,unicode_str); */
+    char __pad_28[4];
+};
+struct open_esync_reply
+{
+    struct reply_header __header;
+    obj_handle_t handle;
+    int          type;
+    unsigned int shm_idx;
+    char __pad_20[4];
+};
+
 
 struct get_esync_fd_request
 {
@@ -5683,6 +5702,7 @@ enum request
     REQ_suspend_process,
     REQ_resume_process,
     REQ_create_esync,
+    REQ_open_esync,
     REQ_get_esync_fd,
     REQ_esync_msgwait,
     REQ_NB_REQUESTS
@@ -5967,6 +5987,7 @@ union generic_request
     struct suspend_process_request suspend_process_request;
     struct resume_process_request resume_process_request;
     struct create_esync_request create_esync_request;
+    struct open_esync_request open_esync_request;
     struct get_esync_fd_request get_esync_fd_request;
     struct esync_msgwait_request esync_msgwait_request;
 };
@@ -6249,13 +6270,14 @@ union generic_reply
     struct suspend_process_reply suspend_process_reply;
     struct resume_process_reply resume_process_reply;
     struct create_esync_reply create_esync_reply;
+    struct open_esync_reply open_esync_reply;
     struct get_esync_fd_reply get_esync_fd_reply;
     struct esync_msgwait_reply esync_msgwait_reply;
 };
 
 /* ### protocol_version begin ### */
 
-#define SERVER_PROTOCOL_VERSION 657
+#define SERVER_PROTOCOL_VERSION 658
 
 /* ### protocol_version end ### */
 
