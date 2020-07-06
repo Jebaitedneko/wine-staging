@@ -397,6 +397,7 @@ DECL_HANDLER(create_esync);
 DECL_HANDLER(open_esync);
 DECL_HANDLER(get_esync_fd);
 DECL_HANDLER(esync_msgwait);
+DECL_HANDLER(get_esync_apc_fd);
 
 #ifdef WANT_REQUEST_HANDLERS
 
@@ -681,6 +682,7 @@ static const req_handler req_handlers[REQ_NB_REQUESTS] =
     (req_handler)req_open_esync,
     (req_handler)req_get_esync_fd,
     (req_handler)req_esync_msgwait,
+    (req_handler)req_get_esync_apc_fd,
 };
 
 C_ASSERT( sizeof(abstime_t) == 8 );
@@ -2268,6 +2270,7 @@ C_ASSERT( FIELD_OFFSET(struct get_esync_fd_reply, shm_idx) == 12 );
 C_ASSERT( sizeof(struct get_esync_fd_reply) == 16 );
 C_ASSERT( FIELD_OFFSET(struct esync_msgwait_request, in_msgwait) == 12 );
 C_ASSERT( sizeof(struct esync_msgwait_request) == 16 );
+C_ASSERT( sizeof(struct get_esync_apc_fd_request) == 16 );
 
 #endif  /* WANT_REQUEST_HANDLERS */
 
