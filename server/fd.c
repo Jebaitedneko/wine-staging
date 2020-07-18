@@ -2795,11 +2795,12 @@ DECL_HANDLER(get_handle_unix_name)
 
     if ((fd = get_handle_fd_obj( current->process, req->handle, 0 )))
     {
-        if (fd->unix_name)
+        char *name = (req->nofollow ? fd->unlink_name : fd->unix_name);
+        if (name)
         {
-            data_size_t name_len = strlen( fd->unix_name );
+            data_size_t name_len = strlen( name );
             reply->name_len = name_len;
-            if (name_len <= get_reply_max_size()) set_reply_data( fd->unix_name, name_len );
+            if (name_len <= get_reply_max_size()) set_reply_data( name, name_len );
             else set_error( STATUS_BUFFER_OVERFLOW );
         }
         else set_error( STATUS_OBJECT_TYPE_MISMATCH );
