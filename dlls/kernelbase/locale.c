@@ -2556,7 +2556,11 @@ static void sortkey_add_main_weights(struct sortkey_data *data, int flags, WCHAR
         break;
 
     case SORTKEY_PUNCTUATION:
-        /* TODO */
+        if ((flags & NORM_IGNORESYMBOLS) || !(flags & SORT_STRINGSORT))
+            break;
+
+        sortkey_add_weight(data, info.script_member);
+        sortkey_add_weight(data, info.weight_primary);
         break;
 
     case SORTKEY_SYMBOL_1:
@@ -2619,7 +2623,9 @@ static void sortkey_add_diacritic_weights(struct sortkey_data *data, int flags, 
         break;
 
     case SORTKEY_PUNCTUATION:
-        /* TODO */
+        if ((flags & NORM_IGNORESYMBOLS) || !(flags & SORT_STRINGSORT))
+            break;
+        sortkey_add_diacritic_weight(data, info.weight_diacritic, last_weighted_pos);
         break;
 
     case SORTKEY_SYMBOL_1:
@@ -2660,7 +2666,9 @@ static void sortkey_add_case_weights(struct sortkey_data *data, int flags, WCHAR
         break;
 
     case SORTKEY_PUNCTUATION:
-        /* TODO */
+        if ((flags & NORM_IGNORESYMBOLS) || !(flags & SORT_STRINGSORT))
+            break;
+        sortkey_add_case_weight(data, flags, info.weight_case);
         break;
 
     case SORTKEY_SYMBOL_1:
@@ -2677,6 +2685,24 @@ static void sortkey_add_case_weights(struct sortkey_data *data, int flags, WCHAR
     default:
         sortkey_add_case_weight(data, flags, info.weight_case);
         break;
+    }
+}
+
+static void sortkey_add_special_weights(struct sortkey_data *data, int flags, WCHAR c)
+{
+    struct character_info info;
+    BYTE weight_second;
+
+    sortkey_get_char(&info, c);
+
+    if (info.script_member == SORTKEY_PUNCTUATION)
+    {
+        if ((flags & NORM_IGNORESYMBOLS) || (flags & SORT_STRINGSORT))
+            return;
+
+        weight_second = (BYTE)(info.weight_diacritic * 8 + info.weight_case);
+        sortkey_add_weight(data, info.weight_primary);
+        sortkey_add_weight(data, weight_second);
     }
 }
 
@@ -2721,7 +2747,8 @@ static int sortkey_generate(int flags, const WCHAR *locale, const WCHAR *str, in
     sortkey_add_weight(&data, SORTKEY_SEPARATOR);
 
     /* Special weights */
-    /* TODO */
+    for (i = 0; i < str_len; i++)
+        sortkey_add_special_weights(&data, flags, str[i]);
     sortkey_add_weight(&data, SORTKEY_TERMINATOR);
 
     if (data.buffer_pos <= buffer_len || !buffer)
