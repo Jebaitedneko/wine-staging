@@ -2459,6 +2459,7 @@ enum sortkey_special_script
 {
     SORTKEY_UNSORTABLE  = 0,
     SORTKEY_DIACRITIC   = 1,
+    SORTKEY_EXPANSION   = 2,
     SORTKEY_JAPANESE    = 3,
     SORTKEY_JAMO        = 4,
     SORTKEY_CJK         = 5,
@@ -2496,11 +2497,25 @@ struct sortkey_data
 static void sortkey_get_char(struct character_info *info, WCHAR ch)
 {
     DWORD value = sort.keys[ch];
-
     info->weight_case = value >> 24;
     info->weight_diacritic = (value >> 16) & 0xff;
     info->script_member = (value >> 8) & 0xff;
     info->weight_primary = value & 0xff;
+}
+
+static const WCHAR* sortkey_get_expansion(WCHAR ch)
+{
+    DWORD pos_info = sort.keys[ch];
+    unsigned int pos = pos_info >> 16;
+    const DWORD *ptr;
+    unsigned int count_expansion;
+    if ((WORD)pos_info != 0x200) /* Check for expansion magic number */
+        return NULL;
+    ptr = (const DWORD *)(sort.guids + sort.guid_count);
+    count_expansion = *ptr++;
+    if (pos >= count_expansion)
+        return NULL;
+    return (const WCHAR *)(ptr + pos);
 }
 
 
@@ -2533,6 +2548,27 @@ static void sortkey_add_diacritic_weight(struct sortkey_data *data, BYTE value, 
         *last_weighted_pos = data->buffer_pos;
 }
 
+static void sortkey_handle_expansion_main(struct sortkey_data *data, int flags, WCHAR c)
+{
+    struct character_info info;
+    const WCHAR *expansion = sortkey_get_expansion(c);
+    if (expansion)
+    {
+        /* Expansion characters always follow default character logic, ignoring the script_member value */
+        sortkey_handle_expansion_main(data, flags, expansion[0]);
+        sortkey_handle_expansion_main(data, flags, expansion[1]);
+        return;
+    }
+    sortkey_get_char(&info, c);
+    if (info.script_member != SORTKEY_UNSORTABLE)
+    {
+        sortkey_add_weight(data, info.script_member);
+        sortkey_add_weight(data, info.weight_primary);
+        if (sortkey_is_PUA(info.script_member))
+            sortkey_add_weight(data, info.weight_diacritic);
+    }
+}
+
 static void sortkey_add_main_weights(struct sortkey_data *data, int flags, WCHAR c)
 {
     struct character_info info;
@@ -2542,6 +2578,12 @@ static void sortkey_add_main_weights(struct sortkey_data *data, int flags, WCHAR
     switch (info.script_member)
     {
     case SORTKEY_UNSORTABLE:
+        break;
+
+    case SORTKEY_EXPANSION:
+        sortkey_handle_expansion_main(data, flags, c);
+        break;
+
     case SORTKEY_DIACRITIC:
         break;
 
@@ -2598,6 +2640,25 @@ static void sortkey_add_main_weights(struct sortkey_data *data, int flags, WCHAR
     }
 }
 
+static void sortkey_handle_expansion_diacritic(struct sortkey_data *data, int flags, WCHAR c, int *last_weighted_pos)
+{
+    struct character_info info;
+    const WCHAR *expansion = sortkey_get_expansion(c);
+    if (expansion)
+    {
+        /* Expansion characters always follow default character logic, ignoring the script_member value */
+        sortkey_handle_expansion_diacritic(data, flags, expansion[0], last_weighted_pos);
+        sortkey_handle_expansion_diacritic(data, flags, expansion[1], last_weighted_pos);
+        return;
+    }
+    sortkey_get_char(&info, c);
+    if (info.script_member != SORTKEY_UNSORTABLE)
+    {
+        if (!sortkey_is_PUA(info.script_member))
+            sortkey_add_diacritic_weight(data, info.weight_diacritic, last_weighted_pos);
+    }
+}
+
 static void sortkey_add_diacritic_weights(struct sortkey_data *data, int flags, WCHAR c, int *last_weighted_pos, int diacritic_start_pos)
 {
     struct character_info info;
@@ -2608,6 +2669,10 @@ static void sortkey_add_diacritic_weights(struct sortkey_data *data, int flags, 
     switch (info.script_member)
     {
     case SORTKEY_UNSORTABLE:
+        break;
+
+    case SORTKEY_EXPANSION:
+        sortkey_handle_expansion_diacritic(data, flags, c, last_weighted_pos);
         break;
 
     case SORTKEY_DIACRITIC:
@@ -2663,6 +2728,24 @@ static void sortkey_add_diacritic_weights(struct sortkey_data *data, int flags, 
     }
 }
 
+static void sortkey_handle_expansion_case(struct sortkey_data *data, int flags, WCHAR c)
+{
+    struct character_info info;
+    const WCHAR *expansion = sortkey_get_expansion(c);
+    if (expansion)
+    {
+        /* Expansion characters always follow default character logic, ignoring the script_member value */
+        sortkey_handle_expansion_case(data, flags, expansion[0]);
+        sortkey_handle_expansion_case(data, flags, expansion[1]);
+        return;
+    }
+    sortkey_get_char(&info, c);
+    if (info.script_member != SORTKEY_UNSORTABLE)
+    {
+        sortkey_add_case_weight(data, flags, info.weight_case);
+    }
+}
+
 static void sortkey_add_case_weights(struct sortkey_data *data, int flags, WCHAR c)
 {
     struct character_info info;
@@ -2672,6 +2755,12 @@ static void sortkey_add_case_weights(struct sortkey_data *data, int flags, WCHAR
     switch (info.script_member)
     {
     case SORTKEY_UNSORTABLE:
+        break;
+
+    case SORTKEY_EXPANSION:
+        sortkey_handle_expansion_case(data, flags, c);
+        break;
+
     case SORTKEY_DIACRITIC:
         break;
 
