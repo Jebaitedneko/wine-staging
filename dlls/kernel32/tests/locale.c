@@ -3205,6 +3205,35 @@ static const struct sorting_test_entry unicode_sorting_tests[] =
     { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        0, L"A\x0301\x0301", L"A\x0301\x00ad\x0301" }, /* Unsortable combined with diacritics */
     { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        0, L"b\x07f2\x07f2", L"b\x07f2\x2064\x07f2" }, /* Unsortable combined with diacritics */
     { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        0, L"X\x0337\x0337", L"X\x0337\xfffd\x0337" }, /* Unsortable combined with diacritics */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNORECASE, L"c", L"C" },
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNORECASE, L"e", L"E" },
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNORECASE, L"A", L"a" },
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x001b", L"\x001c" }, /* Punctuation primary weight */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x0005", L"\x0006" }, /* Punctuation primary weight */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x0027", L"\xff07", TRUE }, /* Punctuation diacritic/case weight */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x07f4", L"\x07f5", TRUE }, /* Punctuation diacritic/case weight */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x207b", L"\x0008" }, /* Punctuation diacritic/case weight */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x207b", L"\x0008" }, /* Punctuation */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x0004", L"\x0011" }, /* Punctuation */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\xff07", L"\x07f4" }, /* Punctuation primary weight has priority */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\xfe32", L"\x2014" }, /* Punctuation primary weight has priority */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x058a", L"\x2027" }, /* Punctuation primary weight has priority */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNORESYMBOLS, L"\x207b", L"\x0008" }, /* Punctuation */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNORESYMBOLS, L"\x0004", L"\x0011" }, /* Punctuation */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, SORT_STRINGSORT, L"\x207b", L"\x0008" }, /* Punctuation */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    SORT_STRINGSORT, L"\x0004", L"\x0011" }, /* Punctuation */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNORESYMBOLS | SORT_STRINGSORT, L"\x207b", L"\x0008" }, /* Punctuation */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNORESYMBOLS | SORT_STRINGSORT, L"\x0004", L"\x0011" }, /* Punctuation */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    SORT_STRINGSORT, L"\x001a", L"\x001b" }, /* Punctuation main weight */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, SORT_STRINGSORT, L"\x2027", L"\x2011" }, /* Punctuation main weight */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, SORT_STRINGSORT, L"\x3030", L"\x301c" }, /* Punctuation main weight */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, SORT_STRINGSORT, L"\x058a", L"\x2010" }, /* Punctuation diacritic weight */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, SORT_STRINGSORT, L"\x07F5", L"\x07F4" }, /* Punctuation diacritic weight */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, SORT_STRINGSORT, L"\xfe32", L"\x2013" }, /* Punctuation case weight */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, SORT_STRINGSORT, L"\xfe31", L"\xfe58" }, /* Punctuation case weight */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, SORT_STRINGSORT, L"\xff07", L"\x0027" }, /* Punctuation case weight */
+
+
 };
 
 static void test_unicode_sorting(void)
