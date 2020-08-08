@@ -2473,6 +2473,11 @@ enum sortkey_special_script
 
 #define SORTKEY_MIN_WEIGHT 2
 
+const BYTE SORTKEY_FLAGS_EXTRA    = 0xc4; /* Extra data added to the flags values */
+const BYTE SORTKEY_FLAG_HIRAGANA  = 0x20; /* if bit is set then hiragana, else katakana */
+const BYTE SORTKEY_FLAG_LARGE     = 0x02; /* if bit is set then normal kana, else small kana */
+const BYTE SORTKEY_FLAG_FULLWIDTH = 0x01; /* if bit is set then full width, else half width */
+
 struct character_info
 {
     BYTE weight_primary;
@@ -2541,7 +2546,15 @@ static void sortkey_add_main_weights(struct sortkey_data *data, int flags, WCHAR
         break;
 
     case SORTKEY_JAPANESE:
-        /* TODO */
+        if (info.weight_primary <= 1)
+        {
+            /* TODO Kana iteration/repeat characters not implemented yet */
+        }
+        else
+        {
+            sortkey_add_weight(data, 34);
+            sortkey_add_weight(data, info.weight_primary);
+        }
         break;
 
     case SORTKEY_JAMO:
@@ -2614,7 +2627,12 @@ static void sortkey_add_diacritic_weights(struct sortkey_data *data, int flags, 
         break;
 
     case SORTKEY_JAPANESE:
-        /* TODO */
+        if (info.weight_primary <= 1)
+        {
+            /* TODO Kana iteration/repeat characters not implemented yet */
+        }
+        else
+            sortkey_add_diacritic_weight(data, info.weight_diacritic, last_weighted_pos);
         break;
 
     case SORTKEY_JAMO:
@@ -2658,7 +2676,12 @@ static void sortkey_add_case_weights(struct sortkey_data *data, int flags, WCHAR
         break;
 
     case SORTKEY_JAPANESE:
-        /* TODO */
+        if (info.weight_primary <= 1)
+        {
+            /* TODO Kana iteration/repeat characters not implemented yet */
+        }
+        else
+            sortkey_add_case_weight(data, flags, SORTKEY_MIN_WEIGHT);
         break;
 
     case SORTKEY_CJK:
@@ -2706,10 +2729,75 @@ static void sortkey_add_special_weights(struct sortkey_data *data, int flags, WC
     }
 }
 
+static void sortkey_add_extra_weights_small(struct sortkey_data *data, int flags, WCHAR c)
+{
+    struct character_info info;
+
+    sortkey_get_char(&info, c);
+
+    if (info.script_member == SORTKEY_JAPANESE)
+    {
+        if (info.weight_primary <= 1)
+        {
+            /* TODO Kana iteration/repeat characters not implemented yet */
+        }
+        else
+        {
+            if (!(flags & NORM_IGNORENONSPACE))
+            {
+                sortkey_add_weight(data, (info.weight_case & SORTKEY_FLAG_LARGE) | SORTKEY_FLAGS_EXTRA);
+            }
+        }
+    }
+}
+
+static void sortkey_add_extra_weights_kana(struct sortkey_data *data, int flags, WCHAR c)
+{
+    struct character_info info;
+
+    sortkey_get_char(&info, c);
+
+    if (info.script_member == SORTKEY_JAPANESE)
+    {
+        if (info.weight_primary <= 1)
+        {
+            /* TODO Kana iteration/repeat characters not implemented yet */
+        }
+        else
+        {
+            if (flags & NORM_IGNOREKANATYPE)
+                info.weight_case = 0;
+            sortkey_add_weight(data, (info.weight_case & SORTKEY_FLAG_HIRAGANA) | SORTKEY_FLAGS_EXTRA);
+        }
+    }
+}
+
+static void sortkey_add_extra_weights_width(struct sortkey_data *data, int flags, WCHAR c)
+{
+    struct character_info info;
+
+    sortkey_get_char(&info, c);
+
+    if (info.script_member == SORTKEY_JAPANESE)
+    {
+        if (info.weight_primary <= 1)
+        {
+            /* TODO Kana iteration/repeat characters not implemented yet */
+        }
+        else
+        {
+            if (flags & NORM_IGNOREWIDTH)
+                info.weight_case = 0;
+            sortkey_add_weight(data, (info.weight_case & SORTKEY_FLAG_FULLWIDTH) | SORTKEY_FLAGS_EXTRA);
+        }
+    }
+}
+
 static int sortkey_generate(int flags, const WCHAR *locale, const WCHAR *str, int str_len, BYTE *buffer, int buffer_len)
 {
     static const BYTE SORTKEY_SEPARATOR = 1;
     static const BYTE SORTKEY_TERMINATOR = 0;
+    static const BYTE SORTKEY_EXTRA_SEPARATOR = 0xff;
     int i;
     struct sortkey_data data;
 
@@ -2743,7 +2831,15 @@ static int sortkey_generate(int flags, const WCHAR *locale, const WCHAR *str, in
     sortkey_add_weight(&data, SORTKEY_SEPARATOR);
 
     /* Extra weights */
-    /* TODO */
+    for (i = 0; i < str_len; i++)
+        sortkey_add_extra_weights_small(&data, flags, str[i]);
+    sortkey_add_weight(&data, SORTKEY_EXTRA_SEPARATOR);
+    for (i = 0; i < str_len; i++)
+        sortkey_add_extra_weights_kana(&data, flags, str[i]);
+    sortkey_add_weight(&data, SORTKEY_EXTRA_SEPARATOR);
+    for (i = 0; i < str_len; i++)
+        sortkey_add_extra_weights_width(&data, flags, str[i]);
+    sortkey_add_weight(&data, SORTKEY_EXTRA_SEPARATOR);
     sortkey_add_weight(&data, SORTKEY_SEPARATOR);
 
     /* Special weights */
