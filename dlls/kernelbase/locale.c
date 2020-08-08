@@ -2494,9 +2494,27 @@ struct sortkey_data
     int buffer_len;
 };
 
-static void sortkey_get_char(struct character_info *info, WCHAR ch)
+static DWORD sortkey_get_exception(WCHAR ch, const struct sortguid *locale)
 {
-    DWORD value = sort.keys[ch];
+    if (locale && locale->except)
+    {
+        DWORD *table = sort.keys + locale->except;
+        DWORD hi = ch >> 8;
+        DWORD lo = ch & 0xff;
+        if (table[hi] == hi * 0x100)
+            return 0;
+        if (sort.keys[table[hi] + lo] == sort.keys[hi * 0x100 + lo])
+            return 0;
+        return sort.keys[table[hi] + lo];
+    }
+    return 0;
+}
+
+static void sortkey_get_char(struct character_info *info, WCHAR ch, const struct sortguid *locale)
+{
+    DWORD value = sortkey_get_exception(ch, locale);
+    if (!value)
+        value = sort.keys[ch];
     info->weight_case = value >> 24;
     info->weight_diacritic = (value >> 16) & 0xff;
     info->script_member = (value >> 8) & 0xff;
@@ -2548,18 +2566,18 @@ static void sortkey_add_diacritic_weight(struct sortkey_data *data, BYTE value, 
         *last_weighted_pos = data->buffer_pos;
 }
 
-static void sortkey_handle_expansion_main(struct sortkey_data *data, int flags, WCHAR c)
+static void sortkey_handle_expansion_main(struct sortkey_data *data, int flags, WCHAR c, const struct sortguid *locale)
 {
     struct character_info info;
     const WCHAR *expansion = sortkey_get_expansion(c);
     if (expansion)
     {
         /* Expansion characters always follow default character logic, ignoring the script_member value */
-        sortkey_handle_expansion_main(data, flags, expansion[0]);
-        sortkey_handle_expansion_main(data, flags, expansion[1]);
+        sortkey_handle_expansion_main(data, flags, expansion[0], locale);
+        sortkey_handle_expansion_main(data, flags, expansion[1], locale);
         return;
     }
-    sortkey_get_char(&info, c);
+    sortkey_get_char(&info, c, locale);
     if (info.script_member != SORTKEY_UNSORTABLE)
     {
         sortkey_add_weight(data, info.script_member);
@@ -2569,11 +2587,11 @@ static void sortkey_handle_expansion_main(struct sortkey_data *data, int flags, 
     }
 }
 
-static void sortkey_add_main_weights(struct sortkey_data *data, int flags, WCHAR c)
+static void sortkey_add_main_weights(struct sortkey_data *data, int flags, WCHAR c, const struct sortguid *locale)
 {
     struct character_info info;
 
-    sortkey_get_char(&info, c);
+    sortkey_get_char(&info, c, locale);
 
     switch (info.script_member)
     {
@@ -2581,7 +2599,7 @@ static void sortkey_add_main_weights(struct sortkey_data *data, int flags, WCHAR
         break;
 
     case SORTKEY_EXPANSION:
-        sortkey_handle_expansion_main(data, flags, c);
+        sortkey_handle_expansion_main(data, flags, c, locale);
         break;
 
     case SORTKEY_DIACRITIC:
@@ -2640,18 +2658,18 @@ static void sortkey_add_main_weights(struct sortkey_data *data, int flags, WCHAR
     }
 }
 
-static void sortkey_handle_expansion_diacritic(struct sortkey_data *data, int flags, WCHAR c, int *last_weighted_pos)
+static void sortkey_handle_expansion_diacritic(struct sortkey_data *data, int flags, WCHAR c, int *last_weighted_pos, const struct sortguid *locale)
 {
     struct character_info info;
     const WCHAR *expansion = sortkey_get_expansion(c);
     if (expansion)
     {
         /* Expansion characters always follow default character logic, ignoring the script_member value */
-        sortkey_handle_expansion_diacritic(data, flags, expansion[0], last_weighted_pos);
-        sortkey_handle_expansion_diacritic(data, flags, expansion[1], last_weighted_pos);
+        sortkey_handle_expansion_diacritic(data, flags, expansion[0], last_weighted_pos, locale);
+        sortkey_handle_expansion_diacritic(data, flags, expansion[1], last_weighted_pos, locale);
         return;
     }
-    sortkey_get_char(&info, c);
+    sortkey_get_char(&info, c, locale);
     if (info.script_member != SORTKEY_UNSORTABLE)
     {
         if (!sortkey_is_PUA(info.script_member))
@@ -2659,12 +2677,12 @@ static void sortkey_handle_expansion_diacritic(struct sortkey_data *data, int fl
     }
 }
 
-static void sortkey_add_diacritic_weights(struct sortkey_data *data, int flags, WCHAR c, int *last_weighted_pos, int diacritic_start_pos)
+static void sortkey_add_diacritic_weights(struct sortkey_data *data, int flags, WCHAR c, int *last_weighted_pos, int diacritic_start_pos, const struct sortguid *locale)
 {
     struct character_info info;
     int old_pos;
 
-    sortkey_get_char(&info, c);
+    sortkey_get_char(&info, c, locale);
 
     switch (info.script_member)
     {
@@ -2672,7 +2690,7 @@ static void sortkey_add_diacritic_weights(struct sortkey_data *data, int flags, 
         break;
 
     case SORTKEY_EXPANSION:
-        sortkey_handle_expansion_diacritic(data, flags, c, last_weighted_pos);
+        sortkey_handle_expansion_diacritic(data, flags, c, last_weighted_pos, locale);
         break;
 
     case SORTKEY_DIACRITIC:
@@ -2728,29 +2746,29 @@ static void sortkey_add_diacritic_weights(struct sortkey_data *data, int flags, 
     }
 }
 
-static void sortkey_handle_expansion_case(struct sortkey_data *data, int flags, WCHAR c)
+static void sortkey_handle_expansion_case(struct sortkey_data *data, int flags, WCHAR c, const struct sortguid *locale)
 {
     struct character_info info;
     const WCHAR *expansion = sortkey_get_expansion(c);
     if (expansion)
     {
         /* Expansion characters always follow default character logic, ignoring the script_member value */
-        sortkey_handle_expansion_case(data, flags, expansion[0]);
-        sortkey_handle_expansion_case(data, flags, expansion[1]);
+        sortkey_handle_expansion_case(data, flags, expansion[0], locale);
+        sortkey_handle_expansion_case(data, flags, expansion[1], locale);
         return;
     }
-    sortkey_get_char(&info, c);
+    sortkey_get_char(&info, c, locale);
     if (info.script_member != SORTKEY_UNSORTABLE)
     {
         sortkey_add_case_weight(data, flags, info.weight_case);
     }
 }
 
-static void sortkey_add_case_weights(struct sortkey_data *data, int flags, WCHAR c)
+static void sortkey_add_case_weights(struct sortkey_data *data, int flags, WCHAR c, const struct sortguid *locale)
 {
     struct character_info info;
 
-    sortkey_get_char(&info, c);
+    sortkey_get_char(&info, c, locale);
 
     switch (info.script_member)
     {
@@ -2758,7 +2776,7 @@ static void sortkey_add_case_weights(struct sortkey_data *data, int flags, WCHAR
         break;
 
     case SORTKEY_EXPANSION:
-        sortkey_handle_expansion_case(data, flags, c);
+        sortkey_handle_expansion_case(data, flags, c, locale);
         break;
 
     case SORTKEY_DIACRITIC:
@@ -2800,12 +2818,12 @@ static void sortkey_add_case_weights(struct sortkey_data *data, int flags, WCHAR
     }
 }
 
-static void sortkey_add_special_weights(struct sortkey_data *data, int flags, WCHAR c)
+static void sortkey_add_special_weights(struct sortkey_data *data, int flags, WCHAR c, const struct sortguid *locale)
 {
     struct character_info info;
     BYTE weight_second;
 
-    sortkey_get_char(&info, c);
+    sortkey_get_char(&info, c, locale);
 
     if (info.script_member == SORTKEY_PUNCTUATION)
     {
@@ -2818,11 +2836,11 @@ static void sortkey_add_special_weights(struct sortkey_data *data, int flags, WC
     }
 }
 
-static void sortkey_add_extra_weights_small(struct sortkey_data *data, int flags, WCHAR c)
+static void sortkey_add_extra_weights_small(struct sortkey_data *data, int flags, WCHAR c, const struct sortguid *locale)
 {
     struct character_info info;
 
-    sortkey_get_char(&info, c);
+    sortkey_get_char(&info, c, locale);
 
     if (info.script_member == SORTKEY_JAPANESE)
     {
@@ -2840,11 +2858,11 @@ static void sortkey_add_extra_weights_small(struct sortkey_data *data, int flags
     }
 }
 
-static void sortkey_add_extra_weights_kana(struct sortkey_data *data, int flags, WCHAR c)
+static void sortkey_add_extra_weights_kana(struct sortkey_data *data, int flags, WCHAR c, const struct sortguid *locale)
 {
     struct character_info info;
 
-    sortkey_get_char(&info, c);
+    sortkey_get_char(&info, c, locale);
 
     if (info.script_member == SORTKEY_JAPANESE)
     {
@@ -2861,11 +2879,11 @@ static void sortkey_add_extra_weights_kana(struct sortkey_data *data, int flags,
     }
 }
 
-static void sortkey_add_extra_weights_width(struct sortkey_data *data, int flags, WCHAR c)
+static void sortkey_add_extra_weights_width(struct sortkey_data *data, int flags, WCHAR c, const struct sortguid *locale)
 {
     struct character_info info;
 
-    sortkey_get_char(&info, c);
+    sortkey_get_char(&info, c, locale);
 
     if (info.script_member == SORTKEY_JAPANESE)
     {
@@ -2882,13 +2900,14 @@ static void sortkey_add_extra_weights_width(struct sortkey_data *data, int flags
     }
 }
 
-static int sortkey_generate(int flags, const WCHAR *locale, const WCHAR *str, int str_len, BYTE *buffer, int buffer_len)
+static int sortkey_generate(int flags, const WCHAR *locale_name, const WCHAR *str, int str_len, BYTE *buffer, int buffer_len)
 {
     static const BYTE SORTKEY_SEPARATOR = 1;
     static const BYTE SORTKEY_TERMINATOR = 0;
     static const BYTE SORTKEY_EXTRA_SEPARATOR = 0xff;
     int i;
     struct sortkey_data data;
+    const struct sortguid *locale = get_language_sort(locale_name);
 
     data.buffer = buffer;
     data.buffer_pos = 0;
@@ -2899,7 +2918,7 @@ static int sortkey_generate(int flags, const WCHAR *locale, const WCHAR *str, in
 
     /* Main weights */
     for (i = 0; i < str_len; i++)
-        sortkey_add_main_weights(&data, flags, str[i]);
+        sortkey_add_main_weights(&data, flags, str[i], locale);
     sortkey_add_weight(&data, SORTKEY_SEPARATOR);
 
     /* Diacritic weights */
@@ -2908,7 +2927,7 @@ static int sortkey_generate(int flags, const WCHAR *locale, const WCHAR *str, in
         int diacritic_start_pos = data.buffer_pos;
         int last_weighted_pos = data.buffer_pos;
         for (i = 0; i < str_len; i++)
-            sortkey_add_diacritic_weights(&data, flags, str[i], &last_weighted_pos, diacritic_start_pos);
+            sortkey_add_diacritic_weights(&data, flags, str[i], &last_weighted_pos, diacritic_start_pos, locale);
         /* Remove all weights <= SORTKEY_MIN_WEIGHT from the end */
         data.buffer_pos = last_weighted_pos;
     }
@@ -2916,24 +2935,24 @@ static int sortkey_generate(int flags, const WCHAR *locale, const WCHAR *str, in
 
     /* Case weights */
     for (i = 0; i < str_len; i++)
-        sortkey_add_case_weights(&data, flags, str[i]);
+        sortkey_add_case_weights(&data, flags, str[i], locale);
     sortkey_add_weight(&data, SORTKEY_SEPARATOR);
 
     /* Extra weights */
     for (i = 0; i < str_len; i++)
-        sortkey_add_extra_weights_small(&data, flags, str[i]);
+        sortkey_add_extra_weights_small(&data, flags, str[i], locale);
     sortkey_add_weight(&data, SORTKEY_EXTRA_SEPARATOR);
     for (i = 0; i < str_len; i++)
-        sortkey_add_extra_weights_kana(&data, flags, str[i]);
+        sortkey_add_extra_weights_kana(&data, flags, str[i], locale);
     sortkey_add_weight(&data, SORTKEY_EXTRA_SEPARATOR);
     for (i = 0; i < str_len; i++)
-        sortkey_add_extra_weights_width(&data, flags, str[i]);
+        sortkey_add_extra_weights_width(&data, flags, str[i], locale);
     sortkey_add_weight(&data, SORTKEY_EXTRA_SEPARATOR);
     sortkey_add_weight(&data, SORTKEY_SEPARATOR);
 
     /* Special weights */
     for (i = 0; i < str_len; i++)
-        sortkey_add_special_weights(&data, flags, str[i]);
+        sortkey_add_special_weights(&data, flags, str[i], locale);
     sortkey_add_weight(&data, SORTKEY_TERMINATOR);
 
     if (data.buffer_pos <= buffer_len || !buffer)
@@ -5624,7 +5643,7 @@ INT WINAPI DECLSPEC_HOTPATCH LCMapStringEx( const WCHAR *locale, DWORD flags, co
         TRACE( "(%s,0x%08x,%s,%d,%p,%d)\n",
                debugstr_w(locale), flags, debugstr_wn(src, srclen), srclen, dst, dstlen );
 
-        if (!(ret = sortkey_generate(flags, L"", src, srclen, (BYTE *)dst, dstlen )))
+        if (!(ret = sortkey_generate(flags, locale, src, srclen, (BYTE *)dst, dstlen )))
             SetLastError( ERROR_INSUFFICIENT_BUFFER );
         return ret;
     }
