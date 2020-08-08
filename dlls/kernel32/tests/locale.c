@@ -3324,6 +3324,12 @@ static const struct sorting_test_entry unicode_sorting_tests[] =
     { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, NORM_IGNORECASE, L"\x05d3", L"\x30ba" }, /* Hebrew > Japanese */
     { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, NORM_IGNORECASE, L"\x05e3", L"\x32de" }, /* Hebrew > Japanese */
     { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, NORM_IGNORECASE, L"\x05d7", L"\x30c6" }, /* Hebrew > Japanese */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        0, L"\x00c6", L"\x0041\x0045" }, /* Expansion */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        0, L"\x0f5c", L"\x0f5b\x0fb7" }, /* Expansion */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        0, L"\x05f0", L"\x05d5\x05d5" }, /* Expansion */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_EQUAL,        0, L"\x0f75", L"\x0f71\x0f74" }, /* Expansion character always follow default character logic */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_EQUAL,        0, L"\xfc5e", L"\x064c\x0651" }, /* Expansion character always follow default character logic */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_EQUAL,        0, L"\xfb2b", L"\x05e9\x05c2" }, /* Expansion character always follow default character logic */
 };
 
 static void test_unicode_sorting(void)
