@@ -3232,8 +3232,98 @@ static const struct sorting_test_entry unicode_sorting_tests[] =
     { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, SORT_STRINGSORT, L"\xfe32", L"\x2013" }, /* Punctuation case weight */
     { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, SORT_STRINGSORT, L"\xfe31", L"\xfe58" }, /* Punctuation case weight */
     { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, SORT_STRINGSORT, L"\xff07", L"\x0027" }, /* Punctuation case weight */
-
-
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNORESYMBOLS, L"\x207b", L"\x0008" }, /* Punctuation NORM_IGNORESYMBOLS */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNORESYMBOLS, L"\x0004", L"\x0011" }, /* Punctuation NORM_IGNORESYMBOLS */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNORESYMBOLS | SORT_STRINGSORT, L"\x207b", L"\x0008" }, /* Punctuation NORM_IGNORESYMBOLS SORT_STRINGSORT */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNORESYMBOLS | SORT_STRINGSORT, L"\x0004", L"\x0011" }, /* Punctuation NORM_IGNORESYMBOLS SORT_STRINGSORT */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    SORT_STRINGSORT, L"\x001a", L"\x001b" }, /* Punctuation SORT_STRINGSORT main weight */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, SORT_STRINGSORT, L"\x2027", L"\x2011", }, /* Punctuation SORT_STRINGSORT main weight */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, SORT_STRINGSORT, L"\x3030", L"\x301c", }, /* Punctuation SORT_STRINGSORT main weight */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, SORT_STRINGSORT, L"\x058a", L"\x2010" }, /* Punctuation SORT_STRINGSORT diacritic weight */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, SORT_STRINGSORT, L"\x07F5", L"\x07F4" }, /* Punctuation SORT_STRINGSORT diacritic weight */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, SORT_STRINGSORT, L"\xfe32", L"\x2013" }, /* Punctuation SORT_STRINGSORT case weight */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, SORT_STRINGSORT, L"\xfe31", L"\xfe58" }, /* Punctuation SORT_STRINGSORT case weight */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, SORT_STRINGSORT, L"\xff07", L"\x0027" }, /* Punctuation SORT_STRINGSORT case weight */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x04b0", L"\x32db" }, /* Japanese main weight */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x3093", L"\x1e62\x013f" }, /* Japanese main weight */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x30d3", L"\x30d4" }, /* Japanese diacritic weight */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x307b", L"\x307c" }, /* Japanese diacritic weight */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x30ea", L"\x32f7" }, /* Japanese diacritic weight */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x31fb", L"\x30e9" }, /* Japanese case weight small */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x30db", L"\x31f9" }, /* Japanese case weight small */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\xff6d", L"\xff95" }, /* Japanese case weight small */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNORENONSPACE, L"\x31fb", L"\x30e9" }, /* Japanese case weight small */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNORENONSPACE, L"\x30db", L"\x31f9" }, /* Japanese case weight small */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNORENONSPACE, L"\xff6d", L"\xff95" }, /* Japanese case weight small */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x30d5", L"\x3075" }, /* Japanese case weight kana */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x306a", L"\x30ca" }, /* Japanese case weight kana */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x305a", L"\x30ba" }, /* Japanese case weight kana */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNOREKANATYPE, L"\x30d5", L"\x3075" }, /* Japanese case weight kana */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNOREKANATYPE, L"\x306a", L"\x30ca" }, /* Japanese case weight kana */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNOREKANATYPE, L"\x305a", L"\x30ba" }, /* Japanese case weight kana */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x30bf", L"\xff80" }, /* Japanese case weight width */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x30ab", L"\xff76" }, /* Japanese case weight width */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x30a2", L"\xff71" }, /* Japanese case weight width */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNOREWIDTH, L"\x30bf", L"\xff80" }, /* Japanese case weight width */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNOREWIDTH, L"\x30ab", L"\xff76" }, /* Japanese case weight width */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNOREWIDTH, L"\x30a2", L"\xff71" }, /* Japanese case weight width */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNORENONSPACE, L"\x31a2", L"\x3110" },
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNORENONSPACE, L"\x1342", L"\x133a" },
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNORENONSPACE, L"\x16a4", L"\x16a5" },
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x30b1\x30f6", L"\xff79\x30b1" }, /* Kana small data must have priority over width data */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x30a6\x30a5", L"\xff73\x30a6" }, /* Kana small data must have priority over width data */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x30a8\x30a7", L"\xff74\x30a8" }, /* Kana small data must have priority over width data */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x30b1", L"\xff79" }, /* Kana small data must have priority over width data */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x30a6", L"\xff73" }, /* Kana small data must have priority over width data */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x30a8", L"\xff74" }, /* Kana small data must have priority over width data */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x3046\x30a9", L"\x30a6\x30aa" }, /* Kana small data must have priority over kana type data */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x304a\x3041", L"\x30aa\x3042" }, /* Kana small data must have priority over kana type data */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x3059\x30a7", L"\x30b9\x30a8" }, /* Kana small data must have priority over kana type data */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x3046", L"\x30a6" }, /* Kana small data must have priority over kana type data */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x304a", L"\x30aa" }, /* Kana small data must have priority over kana type data */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x3059", L"\x30b9" }, /* Kana small data must have priority over kana type data */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x30a6\x30a8", L"\xff73\x3048" }, /* Kana type data must have priority over width data */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x30ab\x30a3", L"\xff76\x3043" }, /* Kana type data must have priority over width data */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x30b5\x30ac", L"\xff7b\x304c" }, /* Kana type data must have priority over width data */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x30a6", L"\xff73" }, /* Kana type data must have priority over width data */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x30ab", L"\xff76" }, /* Kana type data must have priority over width data */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x30b5", L"\xff7b" }, /* Kana type data must have priority over width data */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x305a a", L"\x30ba A" }, /* Case weights have priority over extra weights */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x30c1 b", L"\xff81 B" }, /* Case weights have priority over extra weights */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\xff8b x", L"\x31f6 X" }, /* Case weights have priority over extra weights */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x305a", L"\x30ba" }, /* Case weights have priority over extra weights */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x30c1", L"\xff81" }, /* Case weights have priority over extra weights */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\xff8b", L"\x31f6" }, /* Case weights have priority over extra weights */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x0027\x31ff", L"\x007f\xff9b" }, /* Extra weights have priority over special weights */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x07f5\x30f3", L"\x07f4\x3093" }, /* Extra weights have priority over special weights */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\xfe63\x30e0", L"\xff0d\x3080" }, /* Extra weights have priority over special weights */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x0027", L"\x007f" }, /* Extra weights have priority over special weights */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x07f5", L"\x07f4" }, /* Extra weights have priority over special weights */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\xfe63", L"\xff0d" }, /* Extra weights have priority over special weights */
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNOREWIDTH, L"\xff68", L"\x30a3" },
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNOREWIDTH, L"\xff75", L"\x30aa" },
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNOREWIDTH, L"\x30e2", L"\xff93" },
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\xff68", L"\x30a3" },
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\xff75", L"\x30aa" },
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x30e2", L"\xff93" },
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNOREKANATYPE, L"\x30a8", L"\x3048" },
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNOREKANATYPE, L"\x30af", L"\x304f" },
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNOREKANATYPE, L"\x3067", L"\x30c7" },
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x30a8", L"\x3048" },
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x30af", L"\x304f" },
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x3067", L"\x30c7" },
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNOREWIDTH, L"\xffb7", L"\x3147" },
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNOREWIDTH, L"\xffb6", L"\x3146" },
+    { L"en-US", CSTR_EQUAL,        CSTR_EQUAL,        NORM_IGNOREWIDTH, L"\x3145", L"\xffb5" },
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    NORM_IGNORECASE, L"\xffb7", L"\x3147" },
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    NORM_IGNORECASE, L"\xffb6", L"\x3146" },
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, NORM_IGNORECASE, L"\x3145", L"\xffb5" },
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    NORM_IGNORECASE, L"\x2cff", L"\x30ba" }, /* Coptic < Japanese */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    NORM_IGNORECASE, L"\x2cdb", L"\x32de" }, /* Coptic < Japanese */
+    { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    NORM_IGNORECASE, L"\x2ce0", L"\x30c6" }, /* Coptic < Japanese */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, NORM_IGNORECASE, L"\x05d3", L"\x30ba" }, /* Hebrew > Japanese */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, NORM_IGNORECASE, L"\x05e3", L"\x32de" }, /* Hebrew > Japanese */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, NORM_IGNORECASE, L"\x05d7", L"\x30c6" }, /* Hebrew > Japanese */
 };
 
 static void test_unicode_sorting(void)
