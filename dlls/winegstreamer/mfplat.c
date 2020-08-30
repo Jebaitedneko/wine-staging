@@ -849,6 +849,8 @@ IMFMediaType *mf_media_type_from_caps(const GstCaps *caps)
                     IMFMediaType_SetUINT32(media_type, &MF_MT_MPEG2_PROFILE, eAVEncH264VProfile_High);
                 else if (!(strcmp(profile, "high-4:4:4")))
                     IMFMediaType_SetUINT32(media_type, &MF_MT_MPEG2_PROFILE, eAVEncH264VProfile_444);
+                else if (!(strcmp(profile, "constrained-baseline")))
+                    IMFMediaType_SetUINT32(media_type, &MF_MT_MPEG2_PROFILE, eAVEncH264VProfile_ConstrainedBase);
                 else
                     FIXME("Unrecognized profile %s\n", profile);
             }
@@ -1164,6 +1166,7 @@ GstCaps *caps_from_mf_media_type(IMFMediaType *type)
                     case eAVEncH264VProfile_Main: profile = "main"; break;
                     case eAVEncH264VProfile_High: profile = "high"; break;
                     case eAVEncH264VProfile_444: profile = "high-4:4:4"; break;
+                    case eAVEncH264VProfile_ConstrainedBase: profile = "constrained-baseline"; break;
                     default: FIXME("Unknown profile %u\n", h264_profile);
                 }
                 if (profile)
