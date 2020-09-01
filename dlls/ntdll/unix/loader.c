@@ -1692,9 +1692,6 @@ static struct unix_funcs unix_funcs =
 #endif
     DbgUiIssueRemoteBreakin,
     RtlGetSystemTimePrecise,
-    fast_RtlpWaitForCriticalSection,
-    fast_RtlpUnWaitCriticalSection,
-    fast_RtlDeleteCriticalSection,
     fast_RtlTryAcquireSRWLockExclusive,
     fast_RtlAcquireSRWLockExclusive,
     fast_RtlTryAcquireSRWLockShared,
