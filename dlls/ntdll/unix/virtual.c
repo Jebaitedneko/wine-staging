@@ -164,8 +164,9 @@ struct _KUSER_SHARED_DATA *user_shared_data = (void *)0x7ffe0000;
 static void *teb_block;
 static void **next_free_teb;
 static int teb_block_pos;
-static struct list teb_list = LIST_INIT( teb_list );
-static pthread_rwlock_t teb_list_lock = PTHREAD_RWLOCK_INITIALIZER;
+
+struct list teb_list = LIST_INIT( teb_list );
+pthread_rwlock_t teb_list_lock = PTHREAD_RWLOCK_INITIALIZER;
 
 #define ROUND_ADDR(addr,mask) ((void *)((UINT_PTR)(addr) & ~(UINT_PTR)(mask)))
 #define ROUND_SIZE(addr,size) (((SIZE_T)(size) + ((UINT_PTR)(addr) & page_mask) + page_mask) & ~page_mask)
