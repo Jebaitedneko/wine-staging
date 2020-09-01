@@ -2357,6 +2357,15 @@ NTSTATUS WINAPI NtAlertThreadByThreadId( HANDLE tid )
         if (teb->ClientId.UniqueThread == tid)
         {
             pthread_rwlock_unlock( &teb_list_lock );
+#ifdef __linux__
+            if (use_futexes())
+            {
+                int *futex = &thread_data->tid_alert_futex;
+                if (!InterlockedExchange( futex, 1 ))
+                    futex_wake( futex, 1 );
+                return STATUS_SUCCESS;
+            }
+#endif
             NtSetEvent( thread_data->tid_alert_event, NULL );
             return STATUS_SUCCESS;
         }
@@ -2367,6 +2376,28 @@ NTSTATUS WINAPI NtAlertThreadByThreadId( HANDLE tid )
 }
 
 
+static LONGLONG get_absolute_timeout( const LARGE_INTEGER *timeout )
+{
+    LARGE_INTEGER now;
+
+    if (timeout->QuadPart >= 0) return timeout->QuadPart;
+    NtQuerySystemTime( &now );
+    return now.QuadPart - timeout->QuadPart;
+}
+
+
+static LONGLONG update_timeout( ULONGLONG end )
+{
+    LARGE_INTEGER now;
+    LONGLONG timeleft;
+
+    NtQuerySystemTime( &now );
+    timeleft = end - now.QuadPart;
+    if (timeleft < 0) timeleft = 0;
+    return timeleft;
+}
+
+
 /***********************************************************************
  *             NtWaitForAlertByThreadId (NTDLL.@)
  */
@@ -2374,6 +2405,40 @@ NTSTATUS WINAPI NtWaitForAlertByThreadId( const void *address, const LARGE_INTEG
 {
     TRACE( "%p %s\n", address, debugstr_timeout( timeout ) );
 
+#ifdef __linux__
+    if (use_futexes())
+    {
+        int *futex = &ntdll_get_thread_data()->tid_alert_futex;
+        ULONGLONG end;
+        int ret;
+
+        if (timeout)
+        {
+            if (timeout->QuadPart == TIMEOUT_INFINITE)
+                timeout = NULL;
+            else
+                end = get_absolute_timeout( timeout );
+        }
+
+        while (!InterlockedExchange( futex, 0 ))
+        {
+            if (timeout)
+            {
+                LONGLONG timeleft = update_timeout( end );
+                struct timespec timespec;
+
+                timespec.tv_sec = timeleft / (ULONGLONG)TICKSPERSEC;
+                timespec.tv_nsec = (timeleft % TICKSPERSEC) * 100;
+                ret = futex_wait( futex, 0, &timespec );
+            }
+            else
+                ret = futex_wait( futex, 0, NULL );
+
+            if (ret == -1 && errno == ETIMEDOUT) return STATUS_TIMEOUT;
+        }
+        return STATUS_ALERTED;
+    }
+#endif
     return NtWaitForSingleObject( ntdll_get_thread_data()->tid_alert_event, FALSE, timeout );
 }
 
