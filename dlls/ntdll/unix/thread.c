@@ -252,6 +252,8 @@ NTSTATUS WINAPI NtCreateThreadEx( HANDLE *handle, ACCESS_MASK access, OBJECT_ATT
     thread_data->start = start;
     thread_data->param = param;
 
+    NtCreateEvent( &thread_data->tid_alert_event, EVENT_ALL_ACCESS, NULL, SynchronizationEvent, FALSE );
+
     pthread_attr_init( &pthread_attr );
     pthread_attr_setstack( &pthread_attr, teb->DeallocationStack,
                            (char *)teb->Tib.StackBase + extra_stack - (char *)teb->DeallocationStack );
