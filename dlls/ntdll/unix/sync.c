@@ -82,6 +82,12 @@ static const LARGE_INTEGER zero_timeout;
 
 static pthread_mutex_t addr_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+static const char *debugstr_timeout( const LARGE_INTEGER *timeout )
+{
+    if (!timeout) return "(infinite)";
+    return wine_dbgstr_longlong( timeout->QuadPart );
+}
+
 /* return a monotonic time counter, in Win32 ticks */
 static inline ULONGLONG monotonic_counter(void)
 {
@@ -2330,6 +2336,45 @@ NTSTATUS WINAPI NtQueryInformationAtom( RTL_ATOM atom, ATOM_INFORMATION_CLASS cl
         break;
     }
     return status;
+}
+
+
+/***********************************************************************
+ *             NtAlertThreadByThreadId (NTDLL.@)
+ */
+NTSTATUS WINAPI NtAlertThreadByThreadId( HANDLE tid )
+{
+    struct ntdll_thread_data *thread_data;
+
+    TRACE( "%p\n", tid );
+
+    pthread_rwlock_rdlock( &teb_list_lock );
+
+    LIST_FOR_EACH_ENTRY( thread_data, &teb_list, struct ntdll_thread_data, entry )
+    {
+        TEB *teb = CONTAINING_RECORD( thread_data, TEB, GdiTebBatch );
+
+        if (teb->ClientId.UniqueThread == tid)
+        {
+            pthread_rwlock_unlock( &teb_list_lock );
+            NtSetEvent( thread_data->tid_alert_event, NULL );
+            return STATUS_SUCCESS;
+        }
+    }
+
+    pthread_rwlock_unlock( &teb_list_lock );
+    return STATUS_INVALID_CID;
+}
+
+
+/***********************************************************************
+ *             NtWaitForAlertByThreadId (NTDLL.@)
+ */
+NTSTATUS WINAPI NtWaitForAlertByThreadId( const void *address, const LARGE_INTEGER *timeout )
+{
+    TRACE( "%p %s\n", address, debugstr_timeout( timeout ) );
+
+    return NtWaitForSingleObject( ntdll_get_thread_data()->tid_alert_event, FALSE, timeout );
 }
 
 

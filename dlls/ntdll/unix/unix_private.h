@@ -60,6 +60,7 @@ struct ntdll_thread_data
     struct list        entry;         /* entry in TEB list */
     PRTL_THREAD_START_ROUTINE start;  /* thread entry point */
     void              *param;         /* thread entry point parameter */
+    HANDLE             tid_alert_event; /* event for thread-id alerts */
 };
 
 C_ASSERT( sizeof(struct ntdll_thread_data) <= sizeof(((TEB *)0)->GdiTebBatch) );
@@ -111,6 +112,8 @@ extern NTSTATUS CDECL unwind_builtin_dll( ULONG type, struct _DISPATCHER_CONTEXT
 
 extern void CDECL set_show_dot_files( BOOL enable ) DECLSPEC_HIDDEN;
 
+extern struct list teb_list DECLSPEC_HIDDEN;
+extern pthread_rwlock_t teb_list_lock DECLSPEC_HIDDEN;
 extern const char *home_dir DECLSPEC_HIDDEN;
 extern const char *data_dir DECLSPEC_HIDDEN;
 extern const char *build_dir DECLSPEC_HIDDEN;
