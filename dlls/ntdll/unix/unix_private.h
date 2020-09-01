@@ -59,10 +59,14 @@ struct ntdll_thread_data
     struct list        entry;         /* entry in TEB list */
     PRTL_THREAD_START_ROUTINE start;  /* thread entry point */
     void              *param;         /* thread entry point parameter */
+#ifdef __APPLE__
+    semaphore_t        tid_alert_sem; /* Mach semaphore for thread-id alerts */
+#else
 #ifdef __linux__
     int                tid_alert_futex; /* futex for thread-id alerts */
 #endif
     HANDLE             tid_alert_event; /* event for thread-id alerts */
+#endif
 };
 
 C_ASSERT( sizeof(struct ntdll_thread_data) <= sizeof(((TEB *)0)->GdiTebBatch) );
