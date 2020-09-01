@@ -2360,6 +2360,10 @@ NTSTATUS WINAPI NtAlertThreadByThreadId( HANDLE tid )
         if (teb->ClientId.UniqueThread == tid)
         {
             pthread_rwlock_unlock( &teb_list_lock );
+#ifdef __APPLE__
+            semaphore_signal( thread_data->tid_alert_sem );
+            return STATUS_SUCCESS;
+#else
 #ifdef __linux__
             if (use_futexes())
             {
@@ -2371,6 +2375,7 @@ NTSTATUS WINAPI NtAlertThreadByThreadId( HANDLE tid )
 #endif
             NtSetEvent( thread_data->tid_alert_event, NULL );
             return STATUS_SUCCESS;
+#endif
         }
     }
 
@@ -2408,6 +2413,44 @@ NTSTATUS WINAPI NtWaitForAlertByThreadId( const void *address, const LARGE_INTEG
 {
     TRACE( "%p %s\n", address, debugstr_timeout( timeout ) );
 
+#ifdef __APPLE__
+    {
+        semaphore_t sem = ntdll_get_thread_data()->tid_alert_sem;
+        ULONGLONG end;
+        kern_return_t ret;
+
+        if (timeout)
+        {
+            if (timeout->QuadPart == TIMEOUT_INFINITE)
+                timeout = NULL;
+            else
+                end = get_absolute_timeout( timeout );
+        }
+
+        for (;;)
+        {
+            if (timeout)
+            {
+                LONGLONG timeleft = update_timeout( end );
+                mach_timespec_t timespec;
+
+                timespec.tv_sec = timeleft / (ULONGLONG)TICKSPERSEC;
+                timespec.tv_nsec = (timeleft % TICKSPERSEC) * 100;
+                ret = semaphore_timedwait( sem, timespec );
+            }
+            else
+                ret = semaphore_wait( sem );
+
+            switch (ret)
+            {
+            case KERN_SUCCESS: return STATUS_ALERTED;
+            case KERN_ABORTED: continue;
+            case KERN_OPERATION_TIMED_OUT: return STATUS_TIMEOUT;
+            default: return STATUS_INVALID_HANDLE;
+            }
+        }
+    }
+#else
 #ifdef __linux__
     if (use_futexes())
     {
@@ -2443,6 +2486,7 @@ NTSTATUS WINAPI NtWaitForAlertByThreadId( const void *address, const LARGE_INTEG
     }
 #endif
     return NtWaitForSingleObject( ntdll_get_thread_data()->tid_alert_event, FALSE, timeout );
+#endif
 }
 
 
