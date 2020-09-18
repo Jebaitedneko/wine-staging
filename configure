@@ -1745,6 +1745,7 @@ enable_x3daudio1_5
 enable_x3daudio1_6
 enable_x3daudio1_7
 enable_xactengine2_10
+enable_xactengine2_2
 enable_xactengine2_3
 enable_xactengine2_4
 enable_xactengine2_5
@@ -16424,6 +16425,7 @@ then
     enable_x3daudio1_6=${enable_x3daudio1_6:-no}
     enable_x3daudio1_7=${enable_x3daudio1_7:-no}
     enable_xactengine2_10=${enable_xactengine2_10:-no}
+    enable_xactengine2_2=${enable_xactengine2_2:-no}
     enable_xactengine2_3=${enable_xactengine2_3:-no}
     enable_xactengine2_4=${enable_xactengine2_4:-no}
     enable_xactengine2_5=${enable_xactengine2_5:-no}
@@ -21350,6 +21352,7 @@ wine_fn_config_makefile dlls/x3daudio1_5 enable_x3daudio1_5
 wine_fn_config_makefile dlls/x3daudio1_6 enable_x3daudio1_6
 wine_fn_config_makefile dlls/x3daudio1_7 enable_x3daudio1_7
 wine_fn_config_makefile dlls/xactengine2_10 enable_xactengine2_10
+wine_fn_config_makefile dlls/xactengine2_2 enable_xactengine2_2
 wine_fn_config_makefile dlls/xactengine2_3 enable_xactengine2_3
 wine_fn_config_makefile dlls/xactengine2_4 enable_xactengine2_4
 wine_fn_config_makefile dlls/xactengine2_5 enable_xactengine2_5
