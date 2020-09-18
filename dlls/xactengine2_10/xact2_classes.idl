@@ -22,7 +22,9 @@
 
 [
     threading(both),
-#if XACT3_VER == 0x0204
+#if XACT3_VER == 0x0203
+    uuid(1138472b-d187-44e9-81f2-ae1b0e7785f1)
+#elif XACT3_VER == 0x0204
     uuid(bc3e0fc6-2e0d-4c45-bc61-d9c328319bd8)
 #elif XACT3_VER == 0x0205
     uuid(54b68bc7-3a45-416b-a8c9-19bf19ec1df5)
