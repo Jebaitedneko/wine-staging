@@ -1945,6 +1945,7 @@ then
     enable_x3daudio1_6=${enable_x3daudio1_6:-no}
     enable_x3daudio1_7=${enable_x3daudio1_7:-no}
     enable_xactengine2_10=${enable_xactengine2_10:-no}
+    enable_xactengine2_6=${enable_xactengine2_6:-no}
     enable_xactengine2_7=${enable_xactengine2_7:-no}
     enable_xactengine2_8=${enable_xactengine2_8:-no}
     enable_xactengine2_9=${enable_xactengine2_9:-no}
@@ -3961,6 +3962,7 @@ WINE_CONFIG_MAKEFILE(dlls/x3daudio1_5)
 WINE_CONFIG_MAKEFILE(dlls/x3daudio1_6)
 WINE_CONFIG_MAKEFILE(dlls/x3daudio1_7)
 WINE_CONFIG_MAKEFILE(dlls/xactengine2_10)
+WINE_CONFIG_MAKEFILE(dlls/xactengine2_6)
 WINE_CONFIG_MAKEFILE(dlls/xactengine2_7)
 WINE_CONFIG_MAKEFILE(dlls/xactengine2_8)
 WINE_CONFIG_MAKEFILE(dlls/xactengine2_9)
