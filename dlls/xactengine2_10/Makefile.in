@@ -1,0 +1,8 @@
+MODULE    = xactengine2_10.dll
+IMPORTS   = ole32 uuid
+EXTRADEFS = -DXACT3_VER=0x0210
+
+C_SRCS = \
+	xact2_dll.c
+
+IDL_SRCS = xact2_classes.idl
