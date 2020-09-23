@@ -52,6 +52,7 @@ type_t *find_parameterized_type(type_t *type, type_list_t *params, int t);
 void type_parameterized_interface_declare(type_t *type, type_list_t *params);
 void type_parameterized_interface_define(type_t *type, type_list_t *params, type_t *inherit, statement_list_t *stmts);
 void type_interface_define(type_t *iface, type_t *inherit, statement_list_t *stmts, type_list_t *requires);
+void type_delegate_define(type_t *iface, statement_list_t *stmts);
 void type_dispinterface_define(type_t *iface, var_list_t *props, var_list_t *methods);
 void type_dispinterface_define_from_iface(type_t *dispiface, type_t *iface);
 void type_module_define(type_t *module, statement_list_t *stmts);
@@ -238,6 +239,7 @@ static inline int type_is_complete(const type_t *type)
     case TYPE_ARRAY:
     case TYPE_BITFIELD:
     case TYPE_RUNTIMECLASS:
+    case TYPE_DELEGATE:
         return TRUE;
     case TYPE_APICONTRACT:
     case TYPE_PARAMETERIZED_TYPE:
@@ -359,6 +361,13 @@ static inline type_t *type_runtimeclass_get_default_iface(const type_t *type)
 
     assert(0);
     return NULL;
+}
+
+static inline type_t *type_delegate_get_iface(const type_t *type)
+{
+    type = type_get_real_type(type);
+    assert(type_get_type(type) == TYPE_DELEGATE);
+    return type->details.delegate.iface;
 }
 
 static inline const decl_spec_t *type_pointer_get_ref(const type_t *type)
