@@ -75,6 +75,8 @@ static void append_chain_callconv(type_t *chain, char *callconv);
 static warning_list_t *append_warning(warning_list_t *, int);
 
 static type_t *reg_typedefs(decl_spec_t *decl_spec, var_list_t *names, attr_list_t *attrs);
+static type_t *get_qualified_type(enum type_type type, char *name, int t);
+static type_t *find_qualified_type_or_error(const char *name, int t);
 static type_t *find_type_or_error(const char *name, int t);
 static type_t *find_type_or_error2(char *name, int t);
 
@@ -82,7 +84,6 @@ static var_t *reg_const(var_t *var);
 
 static void push_namespace(const char *name);
 static void pop_namespace(const char *name);
-static void init_lookup_namespace(const char *name);
 static void push_lookup_namespace(const char *name);
 
 static void check_arg_attrs(const var_t *arg);
@@ -295,7 +296,7 @@ static typelib_t *current_typelib;
 %type <str> namespacedef
 %type <type> base_type int_std
 %type <type> enumdef structdef uniondef typedecl
-%type <type> type qualified_seq qualified_type
+%type <type> type qualified_type
 %type <ifref> class_interface
 %type <ifref_list> class_interfaces
 %type <var> arg ne_union_field union_field s_field case enum enum_member declaration
@@ -888,15 +889,15 @@ int_std:  tINT					{ $$ = type_new_int(TYPE_BASIC_INT, 0); }
 	| tINT3264				{ $$ = type_new_int(TYPE_BASIC_INT3264, 0); }
 	;
 
-qualified_seq:
-      aKNOWNTYPE      { $$ = find_type_or_error($1, 0); }
-    | aIDENTIFIER '.' { push_lookup_namespace($1); } qualified_seq { $$ = $4; }
-    ;
+namespace_pfx:
+	  aNAMESPACE '.'			{ push_lookup_namespace($1); }
+	| namespace_pfx aNAMESPACE '.'		{ push_lookup_namespace($2); }
+	;
 
 qualified_type:
-      aKNOWNTYPE     { $$ = find_type_or_error($1, 0); }
-    | aNAMESPACE '.' { init_lookup_namespace($1); } qualified_seq { $$ = $4; }
-    ;
+	  aKNOWNTYPE				{ $$ = find_type_or_error($1, 0); }
+	| namespace_pfx aKNOWNTYPE		{ $$ = find_qualified_type_or_error($2, 0); }
+	;
 
 coclass:  tCOCLASS aIDENTIFIER			{ $$ = type_new_coclass($2); }
 	| tCOCLASS aKNOWNTYPE			{ $$ = find_type($2, NULL, 0);
@@ -994,6 +995,8 @@ inherit:					{ $$ = NULL; }
 
 interface: tINTERFACE aIDENTIFIER		{ $$ = get_type(TYPE_INTERFACE, $2, current_namespace, 0); }
 	|  tINTERFACE aKNOWNTYPE		{ $$ = get_type(TYPE_INTERFACE, $2, current_namespace, 0); }
+	|  tINTERFACE namespace_pfx aIDENTIFIER	{ $$ = get_qualified_type(TYPE_INTERFACE, $3, 0); }
+	|  tINTERFACE namespace_pfx aKNOWNTYPE	{ $$ = get_qualified_type(TYPE_INTERFACE, $3, 0); }
 	;
 
 interfacehdr: attributes interface		{ $$ = $2;
@@ -1970,12 +1973,6 @@ static void pop_namespace(const char *name)
   current_namespace = current_namespace->parent;
 }
 
-static void init_lookup_namespace(const char *name)
-{
-    if (!(lookup_namespace = find_sub_namespace(&global_namespace, name)))
-        error_loc("namespace '%s' not found\n", name);
-}
-
 static void push_lookup_namespace(const char *name)
 {
     struct namespace *namespace;
@@ -2093,11 +2090,29 @@ type_t *find_type(const char *name, struct namespace *namespace, int t)
   return NULL;
 }
 
+static type_t *get_qualified_type(enum type_type type_type, char *name, int t)
+{
+    type_t *type = get_type(type_type, name, lookup_namespace, t);
+    lookup_namespace = &global_namespace;
+    return type;
+}
+
+static type_t *find_qualified_type_or_error(const char *name, int t)
+{
+    type_t *type;
+    if (!(type = find_type(name, lookup_namespace, t)))
+    {
+        error_loc("type '%s' not found\n", name);
+        return NULL;
+    }
+    lookup_namespace = &global_namespace;
+    return type;
+}
+
 static type_t *find_type_or_error(const char *name, int t)
 {
     type_t *type;
-    if (!(type = find_type(name, current_namespace, t)) &&
-        !(type = find_type(name, lookup_namespace, t)))
+    if (!(type = find_type(name, current_namespace, t)))
     {
         error_loc("type '%s' not found\n", name);
         return NULL;
@@ -2114,15 +2129,16 @@ static type_t *find_type_or_error2(char *name, int t)
 
 int is_type(const char *name)
 {
-    return find_type(name, current_namespace, 0) != NULL ||
-           find_type(name, lookup_namespace, 0) != NULL;
+    if (lookup_namespace != &global_namespace)
+        return find_type(name, lookup_namespace, 0) != NULL;
+    else
+        return find_type(name, current_namespace, 0) != NULL;
 }
 
 int is_namespace(const char *name)
 {
     if (!winrt_mode) return 0;
-    return find_sub_namespace(current_namespace, name) != NULL ||
-           find_sub_namespace(&global_namespace, name) != NULL;
+    return find_sub_namespace(lookup_namespace, name) != NULL;
 }
 
 type_t *get_type(enum type_type type, char *name, struct namespace *namespace, int t)
