@@ -29,6 +29,7 @@
 #include "parser.h"
 #include "typetree.h"
 #include "header.h"
+#include "hash.h"
 
 type_t *duptype(type_t *t, int dupname)
 {
@@ -667,6 +668,57 @@ static void compute_delegate_iface_names(type_t *delegate, type_t *type, type_li
     else iface->c_name = format_namespace(delegate->namespace, "__x_", "_C", iface->name, use_abi_namespace ? "ABI" : NULL);
 }
 
+static void compute_interface_signature_uuid(type_t *iface)
+{
+    static unsigned char const wrt_pinterface_namespace[] = {0x11,0xf4,0x7a,0xd5,0x7b,0x73,0x42,0xc0,0xab,0xae,0x87,0x8b,0x1e,0x16,0xad,0xee};
+    static const int version = 5;
+    unsigned char hash[20];
+    SHA_CTX sha_ctx;
+    attr_t *attr;
+    GUID *uuid;
+
+    if (!iface->attrs)
+    {
+        iface->attrs = xmalloc( sizeof(*iface->attrs) );
+        list_init( iface->attrs );
+    }
+
+    LIST_FOR_EACH_ENTRY(attr, iface->attrs, attr_t, entry)
+        if (attr->type == ATTR_UUID) break;
+
+    if (&attr->entry == iface->attrs)
+    {
+        attr = xmalloc( sizeof(*attr) );
+        attr->type = ATTR_UUID;
+        attr->u.pval = xmalloc( sizeof(GUID) );
+        list_add_tail( iface->attrs, &attr->entry );
+    }
+
+    A_SHAInit(&sha_ctx);
+    A_SHAUpdate(&sha_ctx, wrt_pinterface_namespace, sizeof(wrt_pinterface_namespace));
+    A_SHAUpdate(&sha_ctx, (const UCHAR *)iface->signature, strlen(iface->signature));
+    A_SHAFinal(&sha_ctx, (ULONG *)hash);
+
+    /* https://tools.ietf.org/html/rfc4122:
+
+       * Set the four most significant bits (bits 12 through 15) of the
+         time_hi_and_version field to the appropriate 4-bit version number
+         from Section 4.1.3.
+
+       * Set the two most significant bits (bits 6 and 7) of the
+         clock_seq_hi_and_reserved to zero and one, respectively.
+    */
+
+    hash[6] = ((hash[6] & 0x0f) | (version << 4));
+    hash[8] = ((hash[8] & 0x3f) | 0x80);
+
+    uuid = attr->u.pval;
+    uuid->Data1 = ((DWORD)hash[0] << 24)|((DWORD)hash[1] << 16)|((DWORD)hash[2] << 8)|(DWORD)hash[3];
+    uuid->Data2 = ((WORD)hash[4] << 8)|(WORD)hash[5];
+    uuid->Data3 = ((WORD)hash[6] << 8)|(WORD)hash[7];
+    memcpy(&uuid->Data4, hash + 8, sizeof(*uuid) - offsetof(GUID, Data4));
+}
+
 static type_t *replace_type_parameters_in_type(type_t *type, type_list_t *orig, type_list_t *repl);
 
 static type_list_t *replace_type_parameters_in_type_list(type_list_t *type_list, type_list_t *orig, type_list_t *repl)
@@ -895,6 +947,7 @@ type_t *type_parameterized_type_specialize_define(type_t *type, type_list_t *par
         iface->signature = format_parameterized_type_signature(type, params);
         iface->defined = TRUE;
     }
+    compute_interface_signature_uuid(iface);
     compute_method_indexes(iface);
     return iface;
 }

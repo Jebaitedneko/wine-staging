@@ -84,7 +84,7 @@ static inline const GUID *type_get_uuid(const type_t *type)
 {
     static const GUID empty;
     attr_t *attr;
-    LIST_FOR_EACH_ENTRY(attr, type->attrs, attr_t, entry)
+    if (type->attrs) LIST_FOR_EACH_ENTRY(attr, type->attrs, attr_t, entry)
         if (attr->type == ATTR_UUID) return attr->u.pval;
     error("type '%s' uuid not found\n", type->name);
     return &empty;
