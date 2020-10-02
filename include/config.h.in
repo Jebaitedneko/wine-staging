@@ -201,6 +201,9 @@
 /* Define to 1 if you have the `futimesat' function. */
 #undef HAVE_FUTIMESAT
 
+/* Define to 1 if you have the <gcrypt.h> header file. */
+#undef HAVE_GCRYPT_H
+
 /* Define to 1 if you have the `getaddrinfo' function. */
 #undef HAVE_GETADDRINFO
 
@@ -1243,6 +1246,9 @@
 
 /* Define to the soname of the libfreetype library. */
 #undef SONAME_LIBFREETYPE
+
+/* Define to the soname of the libgcrypt library. */
+#undef SONAME_LIBGCRYPT
 
 /* Define to the soname of the libGL library. */
 #undef SONAME_LIBGL
