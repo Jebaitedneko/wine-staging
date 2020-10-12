@@ -26,6 +26,11 @@ import "windowscontracts.idl";
 /* import "eventtoken.idl"; */
 /* import "ivectorchangedeventargs.idl"; */
 
+typedef struct EventRegistrationToken
+{
+    __int64 value;
+} EventRegistrationToken;
+
 namespace Windows {
     namespace Foundation {
         [contract(Windows.Foundation.FoundationContract, 1.0)]
@@ -118,6 +123,12 @@ namespace Windows {
             uuid(9de1c535-6ae1-11e0-84e1-18a905bcc53f)
         ]
         delegate void EventHandler<T>([in] IInspectable *sender, [in] T args);
+
+        [
+            contract(Windows.Foundation.FoundationContract, 1.0),
+            uuid(9de1c534-6ae1-11e0-84e1-18a905bcc53f)
+        ]
+        delegate void TypedEventHandler<TSender, TResult>([in] TSender sender, [in] TResult args);
 
         namespace Collections
         {
