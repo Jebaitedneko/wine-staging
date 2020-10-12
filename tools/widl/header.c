@@ -1494,6 +1494,13 @@ static void write_winrt_type_comments(FILE *header, const type_t *type)
         fprintf(header, " * Introduced to %s in version %d.%d\n *\n", name, (ver >> 16) & 0xffff, ver & 0xffff);
         free(name);
     }
+    switch (get_attrv(type->attrs, ATTR_MARSHALING_BEHAVIOR))
+    {
+        case MARSHALING_AGILE: fprintf(header, " * Class Marshaling Behavior:  Agile - Class is agile\n *\n"); break;
+        case MARSHALING_STANDARD: fprintf(header, " * Class Marshaling Behavior:  Standard - Class marshals using the standard marshaler\n *\n"); break;
+        case MARSHALING_NONE: fprintf(header, " * Class Marshaling Behavior:  None - Class cannot be marshaled\n *\n"); break;
+        default: break;
+    }
 }
 
 static void write_apicontract_guard_start(FILE *header, const expr_t *expr)
