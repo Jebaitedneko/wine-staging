@@ -1485,6 +1485,7 @@ static char *format_apicontract_macro(const type_t *type)
 static void write_winrt_type_comments(FILE *header, const type_t *type)
 {
     expr_t *contract = get_attrp(type->attrs, ATTR_CONTRACT);
+    type_t *exclusiveto = get_attrp(type->attrs, ATTR_EXCLUSIVETO);
     fprintf(header, " *\n");
     if (contract)
     {
@@ -1492,6 +1493,12 @@ static void write_winrt_type_comments(FILE *header, const type_t *type)
         char *name = format_namespace(type->namespace, "", ".", type->name, NULL);
         int ver = contract->ref->u.lval;
         fprintf(header, " * Introduced to %s in version %d.%d\n *\n", name, (ver >> 16) & 0xffff, ver & 0xffff);
+        free(name);
+    }
+    if (exclusiveto)
+    {
+        char *name = format_namespace(exclusiveto->namespace, "", ".", exclusiveto->name, NULL);
+        fprintf(header, " * Interface is a part of the implementation of type %s\n *\n", name);
         free(name);
     }
     switch (get_attrv(type->attrs, ATTR_THREADING))
