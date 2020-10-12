@@ -11,9 +11,15 @@
 #include "activation.h"
 
 #define WIDL_USING_IVECTORVIEW_1_WINDOWS_GAMING_INPUT_GAMEPAD
+#define WIDL_USING_IVECTORVIEW_1_WINDOWS_GAMING_INPUT_RAWGAMECONTROLLER
 #define WIDL_USING_IEVENTHANDLER_1_WINDOWS_GAMING_INPUT_GAMEPAD
+#define WIDL_USING_IEVENTHANDLER_1_WINDOWS_GAMING_INPUT_RAWGAMECONTROLLER
 #define WIDL_USING_WINDOWS_GAMING_INPUT_IGAMEPAD
 #define WIDL_USING_WINDOWS_GAMING_INPUT_IGAMEPADSTATICS
+#define WIDL_USING_WINDOWS_GAMING_INPUT_IRAWGAMECONTROLLERSTATICS
+#define WIDL_USING_WINDOWS_GAMING_INPUT_IGAMECONTROLLER
+#define WIDL_USING_WINDOWS_GAMING_INPUT_IRAWGAMECONTROLLER
+#define WIDL_USING_WINDOWS_GAMING_INPUT_RAWGAMECONTROLLER
 #include "windows.foundation.h"
 #include "windows.gaming.input.h"
 
@@ -32,6 +38,7 @@ struct windows_gaming_input
 {
     IActivationFactory IActivationFactory_iface;
     IGamepadStatics IGamepadStatics_iface;
+    IRawGameControllerStatics IRawGameControllerStatics_iface;
     IVectorView_Gamepad IVectorView_Gamepad_iface;
     LONG ref;
 };
@@ -46,9 +53,19 @@ static inline struct windows_gaming_input *impl_from_IGamepadStatics(IGamepadSta
     return CONTAINING_RECORD(iface, struct windows_gaming_input, IGamepadStatics_iface);
 }
 
+static inline struct windows_gaming_input *impl_from_IRawGameControllerStatics(IRawGameControllerStatics *iface)
+{
+    return CONTAINING_RECORD(iface, struct windows_gaming_input, IRawGameControllerStatics_iface);
+}
+
 static inline struct windows_gaming_input *impl_from_IVectorView_Gamepad(IVectorView_Gamepad *iface)
 {
     return CONTAINING_RECORD(iface, struct windows_gaming_input, IVectorView_Gamepad_iface);
+}
+
+static inline struct windows_gaming_input *impl_from_IVectorView_RawGameController(IVectorView_RawGameController *iface)
+{
+    return CONTAINING_RECORD(iface, struct windows_gaming_input, IVectorView_RawGameController_iface);
 }
 
 static HRESULT STDMETHODCALLTYPE vector_view_gamepad_QueryInterface(
@@ -266,6 +283,123 @@ static const struct IGamepadStaticsVtbl gamepad_statics_vtbl =
     gamepad_statics_get_Gamepads,
 };
 
+static HRESULT STDMETHODCALLTYPE raw_game_controller_statics_QueryInterface(
+        IRawGameControllerStatics *iface, REFIID iid, void **out)
+{
+    TRACE("iface %p, iid %s, out %p stub!\n", iface, debugstr_guid(iid), out);
+
+    if (IsEqualGUID(iid, &IID_IAgileObject))
+    {
+        IUnknown_AddRef(iface);
+        *out = iface;
+        return S_OK;
+    }
+
+    WARN("%s not implemented, returning E_NOINTERFACE.\n", debugstr_guid(iid));
+    *out = NULL;
+    return E_NOINTERFACE;
+}
+
+static ULONG STDMETHODCALLTYPE raw_game_controller_statics_AddRef(
+        IRawGameControllerStatics *iface)
+{
+    struct windows_gaming_input *impl = impl_from_IRawGameControllerStatics(iface);
+    ULONG ref = InterlockedIncrement(&impl->ref);
+    TRACE("iface %p, ref %u.\n", iface, ref);
+    return ref;
+}
+
+static ULONG STDMETHODCALLTYPE raw_game_controller_statics_Release(
+        IRawGameControllerStatics *iface)
+{
+    struct windows_gaming_input *impl = impl_from_IRawGameControllerStatics(iface);
+    ULONG ref = InterlockedDecrement(&impl->ref);
+    TRACE("iface %p, ref %u.\n", iface, ref);
+    return ref;
+}
+
+static HRESULT STDMETHODCALLTYPE raw_game_controller_statics_GetIids(
+        IRawGameControllerStatics *iface, ULONG *iid_count, IID **iids)
+{
+    FIXME("iface %p, iid_count %p, iids %p stub!\n", iface, iid_count, iids);
+    return E_NOTIMPL;
+}
+
+static HRESULT STDMETHODCALLTYPE raw_game_controller_statics_GetRuntimeClassName(
+        IRawGameControllerStatics *iface, HSTRING *class_name)
+{
+    FIXME("iface %p, class_name %p stub!\n", iface, class_name);
+    return E_NOTIMPL;
+}
+
+static HRESULT STDMETHODCALLTYPE raw_game_controller_statics_GetTrustLevel(
+        IRawGameControllerStatics *iface, TrustLevel *trust_level)
+{
+    FIXME("iface %p, trust_level %p stub!\n", iface, trust_level);
+    return E_NOTIMPL;
+}
+
+static HRESULT STDMETHODCALLTYPE raw_game_controller_statics_add_RawGameControllerAdded(
+    IRawGameControllerStatics *iface, IEventHandler_RawGameController *value, EventRegistrationToken* token)
+{
+    FIXME("iface %p, value %p, token %p stub!\n", iface, value, token);
+    return E_NOTIMPL;
+}
+
+static HRESULT STDMETHODCALLTYPE raw_game_controller_statics_remove_RawGameControllerAdded(
+    IRawGameControllerStatics *iface, EventRegistrationToken token)
+{
+    FIXME("iface %p, token %#I64x stub!\n", iface, token.value);
+    return E_NOTIMPL;
+}
+
+static HRESULT STDMETHODCALLTYPE raw_game_controller_statics_add_RawGameControllerRemoved(
+    IRawGameControllerStatics *iface, IEventHandler_RawGameController *value, EventRegistrationToken* token)
+{
+    FIXME("iface %p, value %p, token %p stub!\n", iface, value, token);
+    return E_NOTIMPL;
+}
+
+static HRESULT STDMETHODCALLTYPE raw_game_controller_statics_remove_RawGameControllerRemoved(
+    IRawGameControllerStatics *iface, EventRegistrationToken token)
+{
+    FIXME("iface %p, token %#I64x stub!\n", iface, token.value);
+    return E_NOTIMPL;
+}
+
+static HRESULT STDMETHODCALLTYPE raw_game_controller_statics_get_RawGameControllers(
+    IRawGameControllerStatics *iface, IVectorView_RawGameController **value)
+{
+    struct windows_gaming_input *impl = impl_from_IRawGameControllerStatics(iface);
+    FIXME("iface %p, value %p stub!\n", iface, value);
+    return E_NOTIMPL;
+}
+
+static HRESULT STDMETHODCALLTYPE raw_game_controller_statics_FromGameController(
+    IRawGameControllerStatics *iface, IGameController *game_controller, IRawGameController **value)
+{
+    FIXME("iface %p, game_controller %p, value %p stub!\n", iface, game_controller, value);
+    return E_NOTIMPL;
+}
+
+static const struct IRawGameControllerStaticsVtbl raw_game_controller_statics_vtbl =
+{
+    raw_game_controller_statics_QueryInterface,
+    raw_game_controller_statics_AddRef,
+    raw_game_controller_statics_Release,
+    /* IInspectable methods */
+    raw_game_controller_statics_GetIids,
+    raw_game_controller_statics_GetRuntimeClassName,
+    raw_game_controller_statics_GetTrustLevel,
+    /* IRawGameControllerStatics methods */
+    raw_game_controller_statics_add_RawGameControllerAdded,
+    raw_game_controller_statics_remove_RawGameControllerAdded,
+    raw_game_controller_statics_add_RawGameControllerRemoved,
+    raw_game_controller_statics_remove_RawGameControllerRemoved,
+    raw_game_controller_statics_get_RawGameControllers,
+    raw_game_controller_statics_FromGameController,
+};
+
 static HRESULT STDMETHODCALLTYPE windows_gaming_input_QueryInterface(
         IActivationFactory *iface, REFIID iid, void **out)
 {
@@ -285,6 +419,13 @@ static HRESULT STDMETHODCALLTYPE windows_gaming_input_QueryInterface(
     {
         IUnknown_AddRef(iface);
         *out = &impl->IGamepadStatics_iface;
+        return S_OK;
+    }
+
+    if (IsEqualGUID(iid, &IID_IRawGameControllerStatics))
+    {
+        IUnknown_AddRef(iface);
+        *out = &impl->IRawGameControllerStatics_iface;
         return S_OK;
     }
 
@@ -356,6 +497,7 @@ static struct windows_gaming_input windows_gaming_input =
 {
     {&activation_factory_vtbl},
     {&gamepad_statics_vtbl},
+    {&raw_game_controller_statics_vtbl},
     {&vector_view_gamepad_vtbl},
     0
 };
