@@ -1506,6 +1506,7 @@ static void write_winrt_type_comments(FILE *header, const type_t *type)
 {
     expr_t *contract = get_attrp(type->attrs, ATTR_CONTRACT);
     type_t *exclusiveto = get_attrp(type->attrs, ATTR_EXCLUSIVETO);
+    type_list_t *requires = type->type_type == TYPE_INTERFACE ? type_iface_get_requires(type) : NULL;
     expr_list_t statics = LIST_INIT(statics);
     get_attr_statics(type->attrs, &statics);
     fprintf(header, " *\n");
@@ -1522,6 +1523,18 @@ static void write_winrt_type_comments(FILE *header, const type_t *type)
         char *name = format_namespace(exclusiveto->namespace, "", ".", exclusiveto->name, NULL);
         fprintf(header, " * Interface is a part of the implementation of type %s\n *\n", name);
         free(name);
+    }
+    if (requires)
+    {
+        type_list_t *req;
+        fprintf(header, " * Any object which implements this interface must also implement the following interfaces:\n");
+        for (req = requires; req; req = req->next)
+        {
+            char *name = format_namespace(req->type->namespace, "", ".", req->type->name, NULL);
+            fprintf(header, " *     %s\n", name);
+            free(name);
+        }
+        fprintf(header, " *\n");
     }
     if (!list_empty(&statics))
     {

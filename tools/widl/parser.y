@@ -38,12 +38,6 @@
 #include "expr.h"
 #include "typetree.h"
 
-typedef struct list typelist_t;
-struct typenode {
-  type_t *type;
-  struct list entry;
-};
-
 struct _import_t
 {
   char *name;
@@ -51,6 +45,8 @@ struct _import_t
 };
 
 static str_list_t *append_str(str_list_t *list, char *str);
+static type_list_t *append_type(type_list_t *list, type_t *type);
+static type_list_t *append_types(type_list_t *list, type_list_t *types);
 static attr_list_t *append_attr(attr_list_t *list, attr_t *attr);
 static attr_list_t *append_attr_list(attr_list_t *new_list, attr_list_t *old_list);
 static decl_spec_t *make_decl_spec(type_t *type, decl_spec_t *left, decl_spec_t *right,
@@ -141,6 +137,7 @@ static typelib_t *current_typelib;
 	expr_t *expr;
 	expr_list_t *expr_list;
 	type_t *type;
+	type_list_t *typelist;
 	var_t *var;
 	var_list_t *var_list;
 	declarator_t *declarator;
@@ -249,6 +246,7 @@ static typelib_t *current_typelib;
 %token tREADONLY tREF
 %token tREGISTER tREPRESENTAS
 %token tREQUESTEDIT
+%token tREQUIRES
 %token tRESTRICTED
 %token tRETVAL
 %token tRUNTIMECLASS
@@ -298,6 +296,7 @@ static typelib_t *current_typelib;
 %type <type> base_type int_std
 %type <type> enumdef structdef uniondef typedecl
 %type <type> type qualified_type
+%type <typelist> requires required_types
 %type <ifref> class_interface
 %type <ifref_list> class_interfaces
 %type <var> arg ne_union_field union_field s_field case enum enum_member declaration
@@ -1013,19 +1012,27 @@ interfacehdr: attributes interface		{ $$ = $2;
 						}
 	;
 
-interfacedef: interfacehdr inherit
+required_types:
+	  qualified_type			{ $$ = append_type(NULL, $1); }
+	| required_types ',' required_types	{ $$ = append_types($1, $3); }
+
+requires:					{ $$ = NULL; }
+	| tREQUIRES required_types		{ $$ = $2; }
+	;
+
+interfacedef: interfacehdr inherit requires
 	  '{' int_statements '}' semicolon_opt	{ $$ = $1;
 						  if($$ == $2)
 						    error_loc("Interface can't inherit from itself\n");
-						  type_interface_define($$, $2, $4);
+						  type_interface_define($$, $2, $5, $3);
 						  check_async_uuid($$);
 						}
 /* MIDL is able to import the definition of a base class from inside the
  * definition of a derived class, I'll try to support it with this rule */
-	| interfacehdr ':' aIDENTIFIER
+	| interfacehdr ':' aIDENTIFIER requires
 	  '{' import int_statements '}'
 	   semicolon_opt			{ $$ = $1;
-						  type_interface_define($$, find_type_or_error2($3, 0), $6);
+						  type_interface_define($$, find_type_or_error2($3, 0), $7, $4);
 						}
 	| dispinterfacedef semicolon_opt	{ $$ = $1; }
 	;
@@ -1341,6 +1348,26 @@ static str_list_t *append_str(str_list_t *list, char *str)
     entry = xmalloc( sizeof(*entry) );
     entry->str = str;
     list_add_tail( list, &entry->entry );
+    return list;
+}
+
+static type_list_t *append_type(type_list_t *list, type_t *type)
+{
+    type_list_t *entry;
+    if (!type) return list;
+    entry = xmalloc( sizeof(*entry) );
+    entry->type = type;
+    entry->next = list;
+    return entry;
+}
+
+static type_list_t *append_types(type_list_t *list, type_list_t *types)
+{
+    type_list_t *entry;
+    if (!list) return types;
+    if (!types) return list;
+    for (entry = list; entry->next; entry = entry->next) {}
+    entry->next = types;
     return list;
 }
 
@@ -3060,7 +3087,7 @@ static void check_async_uuid(type_t *iface)
         stmts = append_statement(stmts, make_statement_declaration(finish_func));
     }
 
-    type_interface_define(async_iface, inherit, stmts);
+    type_interface_define(async_iface, inherit, stmts, NULL);
     iface->details.iface->async_iface = async_iface->details.iface->async_iface = async_iface;
 }
 

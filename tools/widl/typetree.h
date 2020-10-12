@@ -45,7 +45,7 @@ type_t *type_new_nonencapsulated_union(const char *name, int defined, var_list_t
 type_t *type_new_encapsulated_union(char *name, var_t *switch_field, var_t *union_field, var_list_t *cases);
 type_t *type_new_bitfield(type_t *field_type, const expr_t *bits);
 type_t *type_new_runtimeclass(char *name, struct namespace *namespace);
-void type_interface_define(type_t *iface, type_t *inherit, statement_list_t *stmts);
+void type_interface_define(type_t *iface, type_t *inherit, statement_list_t *stmts, type_list_t *requires);
 void type_dispinterface_define(type_t *iface, var_list_t *props, var_list_t *methods);
 void type_dispinterface_define_from_iface(type_t *dispiface, type_t *iface);
 void type_module_define(type_t *module, statement_list_t *stmts);
@@ -167,6 +167,13 @@ static inline type_t *type_iface_get_inherit(const type_t *type)
     type = type_get_real_type(type);
     assert(type_get_type(type) == TYPE_INTERFACE);
     return type->details.iface->inherit;
+}
+
+static inline type_list_t *type_iface_get_requires(const type_t *type)
+{
+    type = type_get_real_type(type);
+    assert(type_get_type(type) == TYPE_INTERFACE);
+    return type->details.iface->requires;
 }
 
 static inline type_t *type_iface_get_async_iface(const type_t *type)
