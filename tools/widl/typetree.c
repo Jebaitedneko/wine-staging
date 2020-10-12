@@ -100,13 +100,40 @@ static size_t append_namespace(char **buf, size_t *len, size_t pos, struct names
     return n;
 }
 
+static size_t append_namespaces(char **buf, size_t *len, size_t pos, struct namespace *namespace, const char *prefix,
+                                const char *separator, const char *suffix, const char *abi_prefix)
+{
+    size_t n = 0;
+    n += strappend(buf, len, pos + n, "%s", prefix);
+    n += append_namespace(buf, len, pos + n, namespace, separator, abi_prefix);
+    n += strappend(buf, len, pos + n, "%s", suffix);
+    return n;
+}
+
 char *format_namespace(struct namespace *namespace, const char *prefix, const char *separator, const char *suffix, const char *abi_prefix)
+{
+    size_t len = 0;
+    char *buf = NULL;
+    append_namespaces(&buf, &len, 0, namespace, prefix, separator, suffix, abi_prefix);
+    return buf;
+}
+
+char *format_parameterized_type_name(type_t *type, type_list_t *params)
 {
     size_t len = 0, pos = 0;
     char *buf = NULL;
-    pos += strappend(&buf, &len, pos, "%s", prefix);
-    pos += append_namespace(&buf, &len, pos, namespace, separator, abi_prefix);
-    pos += strappend(&buf, &len, pos, "%s", suffix);
+    type_list_t *entry;
+
+    pos += strappend(&buf, &len, pos, "%s<", type->name);
+    for (entry = params; entry; entry = entry->next)
+    {
+        for (type = entry->type; type->type_type == TYPE_POINTER; type = type_pointer_get_ref_type(type)) {}
+        pos += append_namespaces(&buf, &len, pos, type->namespace, "", "::", type->name, use_abi_namespace ? "ABI" : NULL);
+        for (type = entry->type; type->type_type == TYPE_POINTER; type = type_pointer_get_ref_type(type)) pos += strappend(&buf, &len, pos, "*");
+        if (entry->next) pos += strappend(&buf, &len, pos, ",");
+    }
+    pos += strappend(&buf, &len, pos, ">");
+
     return buf;
 }
 
@@ -445,6 +472,14 @@ static unsigned int compute_method_indexes(type_t *iface)
     }
 
     return idx;
+}
+
+type_t *type_parameterized_type_specialize_partial(type_t *type, type_list_t *params)
+{
+    type_t *new_type = duptype(type, 0);
+    new_type->details.parameterized.type = type;
+    new_type->details.parameterized.params = params;
+    return new_type;
 }
 
 void type_parameterized_interface_declare(type_t *type, type_list_t *params)

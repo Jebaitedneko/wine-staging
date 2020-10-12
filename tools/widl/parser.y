@@ -302,6 +302,8 @@ static typelib_t *current_typelib;
 %type <type> type qualified_type
 %type <type> type_parameter
 %type <typelist> type_parameters
+%type <type> parameterized_type
+%type <typelist> parameterized_types
 %type <typelist> requires required_types
 %type <ifref> class_interface
 %type <ifref_list> class_interfaces
@@ -912,6 +914,20 @@ qualified_type:
 	| namespace_pfx aKNOWNTYPE		{ $$ = find_qualified_type_or_error($2, 0); }
 	;
 
+parameterized_type: qualified_type '<' parameterized_types '>'
+						{ $$ = find_parameterized_type($1, $3, 0); }
+	;
+
+parameterized_types:
+	  base_type				{ $$ = append_type(NULL, $1); }
+	| qualified_type			{ $$ = append_type(NULL, $1); }
+	| qualified_type '*'			{ $$ = append_type(NULL, type_new_pointer($1)); }
+	| parameterized_type			{ $$ = append_type(NULL, $1); }
+	| parameterized_type '*'		{ $$ = append_type(NULL, type_new_pointer($1)); }
+	| parameterized_types ',' parameterized_types
+						{ $$ = append_types($1, $3); }
+	;
+
 coclass:  tCOCLASS aIDENTIFIER			{ $$ = type_new_coclass($2); }
 	| tCOCLASS aKNOWNTYPE			{ $$ = find_type($2, NULL, 0);
 						  if (type_get_type_detect_alias($$) != TYPE_COCLASS)
@@ -1004,6 +1020,7 @@ dispinterfacedef: dispinterfacehdr '{'
 
 inherit:					{ $$ = NULL; }
 	| ':' qualified_type                    { $$ = $2; }
+	| ':' parameterized_type		{ $$ = $2; }
 	;
 
 interface: tINTERFACE aIDENTIFIER		{ $$ = get_type(TYPE_INTERFACE, $2, current_namespace, 0); }
@@ -1030,6 +1047,7 @@ type_parameters:
 
 required_types:
 	  qualified_type			{ $$ = append_type(NULL, $1); }
+	| parameterized_type			{ $$ = append_type(NULL, $1); }
 	| required_types ',' required_types	{ $$ = append_types($1, $3); }
 
 requires:					{ $$ = NULL; }
@@ -1251,6 +1269,7 @@ structdef: tSTRUCT t_ident '{' fields '}'	{ $$ = type_new_struct($2, current_nam
 
 type:	  tVOID					{ $$ = type_new_void(); }
 	| qualified_type                        { $$ = $1; }
+	| parameterized_type			{ $$ = $1; }
 	| base_type				{ $$ = $1; }
 	| enumdef				{ $$ = $1; }
 	| tENUM aIDENTIFIER			{ $$ = type_new_enum($2, current_namespace, FALSE, NULL); }
@@ -3368,4 +3387,20 @@ static void check_def(const type_t *t)
     if (t->defined)
         error_loc("%s: redefinition error; original definition was at %s:%d\n",
                   t->name, t->loc_info.input_name, t->loc_info.line_number);
+}
+
+type_t *find_parameterized_type(type_t *type, type_list_t *params, int t)
+{
+    char *name = format_parameterized_type_name(type, params);
+
+    if (parameters_namespace)
+    {
+        assert(type->type_type == TYPE_PARAMETERIZED_TYPE);
+        type = type_parameterized_type_specialize_partial(type, params);
+    }
+    /* FIXME: If not in another parameterized type, we'll have to look for the declared specialization. */
+    else error_loc("parameterized type '%s' not declared\n", name);
+
+    free(name);
+    return type;
 }

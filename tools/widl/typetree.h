@@ -45,6 +45,8 @@ type_t *type_new_nonencapsulated_union(const char *name, int defined, var_list_t
 type_t *type_new_encapsulated_union(char *name, var_t *switch_field, var_t *union_field, var_list_t *cases);
 type_t *type_new_bitfield(type_t *field_type, const expr_t *bits);
 type_t *type_new_runtimeclass(char *name, struct namespace *namespace);
+type_t *type_parameterized_type_specialize_partial(type_t *type, type_list_t *params);
+type_t *find_parameterized_type(type_t *type, type_list_t *params, int t);
 void type_parameterized_interface_declare(type_t *type, type_list_t *params);
 void type_parameterized_interface_define(type_t *type, type_list_t *params, type_t *inherit, statement_list_t *stmts);
 void type_interface_define(type_t *iface, type_t *inherit, statement_list_t *stmts, type_list_t *requires);
