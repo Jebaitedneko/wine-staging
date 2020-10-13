@@ -1306,6 +1306,7 @@ enable_dxgkrnl_sys
 enable_dxgmms1_sys
 enable_dxguid
 enable_dxva2
+enable_encapi
 enable_esent
 enable_evr
 enable_explorerframe
@@ -20434,6 +20435,7 @@ wine_fn_config_makefile dlls/dxgmms1.sys enable_dxgmms1_sys
 wine_fn_config_makefile dlls/dxguid enable_dxguid
 wine_fn_config_makefile dlls/dxva2 enable_dxva2
 wine_fn_config_makefile dlls/dxva2/tests enable_tests
+wine_fn_config_makefile dlls/encapi enable_encapi
 wine_fn_config_makefile dlls/esent enable_esent
 wine_fn_config_makefile dlls/evr enable_evr
 wine_fn_config_makefile dlls/evr/tests enable_tests
