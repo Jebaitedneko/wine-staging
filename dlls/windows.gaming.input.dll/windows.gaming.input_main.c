@@ -112,28 +112,31 @@ static HRESULT STDMETHODCALLTYPE vector_view_gamepad_GetAt(
     IVectorView_Gamepad *iface, ULONG index, IGamepad **value)
 {
     FIXME("iface %p, index %#x, value %p stub!\n", iface, index, value);
-    return E_NOTIMPL;
+    return S_OK;
 }
 
 static HRESULT STDMETHODCALLTYPE vector_view_gamepad_get_Size(
     IVectorView_Gamepad *iface, ULONG *value)
 {
     FIXME("iface %p, value %p stub!\n", iface, value);
-    return E_NOTIMPL;
+    *value = 0;
+    return S_OK;
 }
 
 static HRESULT STDMETHODCALLTYPE vector_view_gamepad_IndexOf(
     IVectorView_Gamepad *iface, IGamepad *element, ULONG *index, BOOLEAN *value)
 {
     FIXME("iface %p, element %p, index %p, value %p stub!\n", iface, element, index, value);
-    return E_NOTIMPL;
+    *value = FALSE;
+    return S_OK;
 }
 
 static HRESULT STDMETHODCALLTYPE vector_view_gamepad_GetMany(
     IVectorView_Gamepad *iface, ULONG start_index, IGamepad **items, UINT *value)
 {
     FIXME("iface %p, start_index %#x, items %p, value %p stub!\n", iface, start_index, items, value);
-    return E_NOTIMPL;
+    *value = 0;
+    return S_OK;
 }
 
 static const struct IVectorView_GamepadVtbl vector_view_gamepad_vtbl =
