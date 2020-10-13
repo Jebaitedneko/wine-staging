@@ -1208,6 +1208,7 @@ enable_d3dcompiler_46
 enable_d3dcompiler_47
 enable_d3dim
 enable_d3dim700
+enable_d3dpmesh
 enable_d3drm
 enable_d3dx10_33
 enable_d3dx10_34
@@ -20286,6 +20287,7 @@ wine_fn_config_makefile dlls/d3dcompiler_47 enable_d3dcompiler_47
 wine_fn_config_makefile dlls/d3dcompiler_47/tests enable_tests
 wine_fn_config_makefile dlls/d3dim enable_d3dim
 wine_fn_config_makefile dlls/d3dim700 enable_d3dim700
+wine_fn_config_makefile dlls/d3dpmesh enable_d3dpmesh
 wine_fn_config_makefile dlls/d3drm enable_d3drm
 wine_fn_config_makefile dlls/d3drm/tests enable_tests
 wine_fn_config_makefile dlls/d3dx10_33 enable_d3dx10_33
