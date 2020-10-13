@@ -1280,6 +1280,7 @@ enable_dpnhupnp
 enable_dpnet
 enable_dpnhpast
 enable_dpnlobby
+enable_dpvacm
 enable_dpvoice
 enable_dpwsockx
 enable_drmclien
@@ -20392,6 +20393,7 @@ wine_fn_config_makefile dlls/dpnet enable_dpnet
 wine_fn_config_makefile dlls/dpnet/tests enable_tests
 wine_fn_config_makefile dlls/dpnhpast enable_dpnhpast
 wine_fn_config_makefile dlls/dpnlobby enable_dpnlobby
+wine_fn_config_makefile dlls/dpvacm enable_dpvacm
 wine_fn_config_makefile dlls/dpvoice enable_dpvoice
 wine_fn_config_makefile dlls/dpvoice/tests enable_tests
 wine_fn_config_makefile dlls/dpwsockx enable_dpwsockx
