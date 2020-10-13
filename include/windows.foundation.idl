@@ -125,6 +125,7 @@ namespace Windows {
         declare {
             interface Windows.Foundation.AsyncOperationCompletedHandler<boolean>;
             interface Windows.Foundation.IAsyncOperation<boolean>;
+            interface Windows.Foundation.Collections.IVectorView<HSTRING>;
         }
     }
 }
