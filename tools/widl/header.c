@@ -1505,6 +1505,7 @@ static char *format_apicontract_macro(const type_t *type)
 static void write_winrt_type_comments(FILE *header, const type_t *type)
 {
     expr_t *contract = get_attrp(type->attrs, ATTR_CONTRACT);
+    expr_t *activatable = get_attrp(type->attrs, ATTR_ACTIVATABLE);
     type_t *exclusiveto = get_attrp(type->attrs, ATTR_EXCLUSIVETO);
     type_list_t *requires = type->type_type == TYPE_INTERFACE ? type_iface_get_requires(type) : NULL;
     expr_list_t statics = LIST_INIT(statics);
@@ -1516,6 +1517,16 @@ static void write_winrt_type_comments(FILE *header, const type_t *type)
         char *name = format_namespace(type->namespace, "", ".", type->name, NULL);
         int ver = contract->ref->u.lval;
         fprintf(header, " * Introduced to %s in version %d.%d\n *\n", name, (ver >> 16) & 0xffff, ver & 0xffff);
+        free(name);
+    }
+    if (activatable)
+    {
+        const type_t *apicontract = activatable->u.tref.type;
+        int version_req = activatable->ref->u.lval;
+        char *name = format_namespace(apicontract->namespace, "", ".", apicontract->name, NULL);
+        fprintf(header, " * RuntimeClass can be activated.\n");
+        fprintf(header, " *   Type can be activated via RoActivateInstance starting with version %d.%d of the %s API contract\n *\n",
+                (version_req >> 16) & 0xffff, version_req & 0xffff, name);
         free(name);
     }
     if (exclusiveto)

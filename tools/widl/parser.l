@@ -321,6 +321,7 @@ static const struct keyword keywords[] = {
  */
 static const struct keyword attr_keywords[] =
 {
+	{"activatable",                 tACTIVATABLE,               1},
 	{"aggregatable",                tAGGREGATABLE,              0},
 	{"agile",                       tAGILE,                     1},
 	{"all_nodes",                   tALLNODES,                  0},
