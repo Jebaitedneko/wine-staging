@@ -269,7 +269,8 @@ enum threading_type
     THREADING_NEUTRAL,
     THREADING_SINGLE,
     THREADING_FREE,
-    THREADING_BOTH
+    THREADING_BOTH,
+    THREADING_MTA,
 };
 
 enum marshaling_type

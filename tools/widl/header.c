@@ -1494,6 +1494,13 @@ static void write_winrt_type_comments(FILE *header, const type_t *type)
         fprintf(header, " * Introduced to %s in version %d.%d\n *\n", name, (ver >> 16) & 0xffff, ver & 0xffff);
         free(name);
     }
+    switch (get_attrv(type->attrs, ATTR_THREADING))
+    {
+        case THREADING_SINGLE: fprintf(header, " * Class Threading Model:  Single Threaded Apartment\n *\n"); break;
+        case THREADING_BOTH: fprintf(header, " * Class Threading Model:  Both Single and Multi Threaded Apartment\n *\n"); break;
+        case THREADING_MTA: fprintf(header, " * Class Threading Model:  Multi Threaded Apartment\n *\n"); break;
+        default: break;
+    }
     switch (get_attrv(type->attrs, ATTR_MARSHALING_BEHAVIOR))
     {
         case MARSHALING_AGILE: fprintf(header, " * Class Marshaling Behavior:  Agile - Class is agile\n *\n"); break;
