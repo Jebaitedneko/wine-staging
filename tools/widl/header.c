@@ -109,6 +109,17 @@ int is_attr(const attr_list_t *list, enum attr_type t)
     return 0;
 }
 
+static void get_attr_statics(const attr_list_t *attrs, expr_list_t *list)
+{
+    const attr_t *attr;
+    if (!attrs) return;
+    LIST_FOR_EACH_ENTRY( attr, attrs, const attr_t, entry )
+    {
+        if (attr->type != ATTR_STATIC) continue;
+        list_add_tail(list, &((expr_t *)attr->u.pval)->entry);
+    }
+}
+
 void *get_attrp(const attr_list_t *list, enum attr_type t)
 {
     const attr_t *attr;
@@ -1495,6 +1506,8 @@ static void write_winrt_type_comments(FILE *header, const type_t *type)
 {
     expr_t *contract = get_attrp(type->attrs, ATTR_CONTRACT);
     type_t *exclusiveto = get_attrp(type->attrs, ATTR_EXCLUSIVETO);
+    expr_list_t statics = LIST_INIT(statics);
+    get_attr_statics(type->attrs, &statics);
     fprintf(header, " *\n");
     if (contract)
     {
@@ -1509,6 +1522,23 @@ static void write_winrt_type_comments(FILE *header, const type_t *type)
         char *name = format_namespace(exclusiveto->namespace, "", ".", exclusiveto->name, NULL);
         fprintf(header, " * Interface is a part of the implementation of type %s\n *\n", name);
         free(name);
+    }
+    if (!list_empty(&statics))
+    {
+        expr_t *expr;
+        fprintf(header, " * RuntimeClass contains static methods.\n");
+        LIST_FOR_EACH_ENTRY(expr, &statics, expr_t, entry)
+        {
+            const type_t *iface = expr->u.tref.type, *apicontract = expr->ref->u.tref.type;
+            int version_req = expr->ref->ref->u.lval;
+            char *iface_name = format_namespace(iface->namespace, "", ".", iface->name, NULL);
+            char *name = format_namespace(apicontract->namespace, "", ".", apicontract->name, NULL);
+            fprintf(header, " *   Static Methods exist on the %s interface starting with version %d.%d of the %s API contract\n",
+                    iface_name, (version_req >> 16) & 0xffff, version_req & 0xffff, name);
+            free(iface_name);
+            free(name);
+        }
+        fprintf(header, " *\n");
     }
     if (type_get_type(type) == TYPE_RUNTIMECLASS)
     {
