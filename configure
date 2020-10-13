@@ -1276,6 +1276,7 @@ enable_dplay
 enable_dplayx
 enable_dpmodemx
 enable_dpnaddr
+enable_dpnhupnp
 enable_dpnet
 enable_dpnhpast
 enable_dpnlobby
@@ -20386,6 +20387,7 @@ wine_fn_config_makefile dlls/dplayx enable_dplayx
 wine_fn_config_makefile dlls/dplayx/tests enable_tests
 wine_fn_config_makefile dlls/dpmodemx enable_dpmodemx
 wine_fn_config_makefile dlls/dpnaddr enable_dpnaddr
+wine_fn_config_makefile dlls/dpnhupnp enable_dpnhupnp
 wine_fn_config_makefile dlls/dpnet enable_dpnet
 wine_fn_config_makefile dlls/dpnet/tests enable_tests
 wine_fn_config_makefile dlls/dpnhpast enable_dpnhpast
