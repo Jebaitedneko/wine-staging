@@ -1570,6 +1570,7 @@ enable_qcap
 enable_qdv
 enable_qdvd
 enable_qedit
+enable_qedwipes
 enable_qmgr
 enable_qmgrprxy
 enable_quartz
@@ -20816,6 +20817,7 @@ wine_fn_config_makefile dlls/qdvd enable_qdvd
 wine_fn_config_makefile dlls/qdvd/tests enable_tests
 wine_fn_config_makefile dlls/qedit enable_qedit
 wine_fn_config_makefile dlls/qedit/tests enable_tests
+wine_fn_config_makefile dlls/qedwipes enable_qedwipes
 wine_fn_config_makefile dlls/qmgr enable_qmgr
 wine_fn_config_makefile dlls/qmgr/tests enable_tests
 wine_fn_config_makefile dlls/qmgrprxy enable_qmgrprxy
