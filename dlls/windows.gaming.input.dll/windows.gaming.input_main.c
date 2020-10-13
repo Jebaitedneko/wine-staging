@@ -229,28 +229,31 @@ static HRESULT STDMETHODCALLTYPE vector_view_raw_game_controller_GetAt(
     IVectorView_RawGameController *iface, ULONG index, IRawGameController **value)
 {
     FIXME("iface %p, index %#x, value %p stub!\n", iface, index, value);
-    return E_NOTIMPL;
+    return S_OK;
 }
 
 static HRESULT STDMETHODCALLTYPE vector_view_raw_game_controller_get_Size(
     IVectorView_RawGameController *iface, ULONG *value)
 {
     FIXME("iface %p, value %p stub!\n", iface, value);
-    return E_NOTIMPL;
+    *value = 0;
+    return S_OK;
 }
 
 static HRESULT STDMETHODCALLTYPE vector_view_raw_game_controller_IndexOf(
     IVectorView_RawGameController *iface, IRawGameController *element, ULONG *index, BOOLEAN *value)
 {
     FIXME("iface %p, element %p, index %p, value %p stub!\n", iface, element, index, value);
-    return E_NOTIMPL;
+    *value = FALSE;
+    return S_OK;
 }
 
 static HRESULT STDMETHODCALLTYPE vector_view_raw_game_controller_GetMany(
     IVectorView_RawGameController *iface, ULONG start_index, IRawGameController **items, UINT *value)
 {
     FIXME("iface %p, start_index %#x, items %p, value %p stub!\n", iface, start_index, items, value);
-    return E_NOTIMPL;
+    *value = 0;
+    return S_OK;
 }
 
 static const struct IVectorView_RawGameControllerVtbl vector_view_raw_game_controller_vtbl =
