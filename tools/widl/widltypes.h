@@ -437,6 +437,12 @@ struct runtimeclass_details
     ifref_list_t *ifaces;
 };
 
+struct parameterized_details
+{
+    type_t *type;
+    type_list_t *params;
+};
+
 #define HASHMAX 64
 
 struct namespace {
@@ -465,6 +471,8 @@ enum type_type
     TYPE_BITFIELD,
     TYPE_APICONTRACT,
     TYPE_RUNTIMECLASS,
+    TYPE_PARAMETERIZED_TYPE,
+    TYPE_PARAMETER,
 };
 
 struct _type_t {
@@ -486,6 +494,7 @@ struct _type_t {
     struct bitfield_details bitfield;
     struct alias_details alias;
     struct runtimeclass_details runtimeclass;
+    struct parameterized_details parameterized;
   } details;
   const char *c_name;
   unsigned int typestring_offset;

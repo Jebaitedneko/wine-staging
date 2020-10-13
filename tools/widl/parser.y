@@ -81,6 +81,8 @@ static var_t *reg_const(var_t *var);
 static void push_namespace(const char *name);
 static void pop_namespace(const char *name);
 static void push_lookup_namespace(const char *name);
+static void push_parameters_namespace(const char *name);
+static void pop_parameters_namespace(const char *name);
 
 static void check_arg_attrs(const var_t *arg);
 static void check_statements(const statement_list_t *stmts, int is_inside_library);
@@ -126,6 +128,7 @@ static struct namespace global_namespace = {
 
 static struct namespace *current_namespace = &global_namespace;
 static struct namespace *lookup_namespace = &global_namespace;
+static struct namespace *parameters_namespace = NULL;
 
 static typelib_t *current_typelib;
 
@@ -297,6 +300,8 @@ static typelib_t *current_typelib;
 %type <type> base_type int_std
 %type <type> enumdef structdef uniondef typedecl
 %type <type> type qualified_type
+%type <type> type_parameter
+%type <typelist> type_parameters
 %type <typelist> requires required_types
 %type <ifref> class_interface
 %type <ifref_list> class_interfaces
@@ -1014,6 +1019,15 @@ interfacehdr: attributes interface		{ $$ = $2;
 						}
 	;
 
+type_parameter: aIDENTIFIER			{ $$ = get_type(TYPE_PARAMETER, $1, parameters_namespace, 0); }
+	| aKNOWNTYPE				{ $$ = get_type(TYPE_PARAMETER, $1, parameters_namespace, 0); }
+	;
+
+type_parameters:
+	  type_parameter			{ $$ = append_type(NULL, $1); }
+	| type_parameters ',' type_parameter	{ $$ = append_type($1, $3); }
+	;
+
 required_types:
 	  qualified_type			{ $$ = append_type(NULL, $1); }
 	| required_types ',' required_types	{ $$ = append_types($1, $3); }
@@ -1029,6 +1043,13 @@ interfacedef: interfacehdr inherit requires
 						  type_interface_define($$, $2, $5, $3);
 						  check_async_uuid($$);
 						}
+	| interfacehdr '<' { push_parameters_namespace($1->name); } type_parameters '>' inherit
+	  '{' int_statements '}' semicolon_opt	{ $$ = $1;
+						  if($$ == $6) error_loc("Interface can't inherit from itself\n");
+						  type_parameterized_interface_define($$, $4, $6, $8);
+						  check_async_uuid($$);
+						  pop_parameters_namespace($1->name);
+						}
 /* MIDL is able to import the definition of a base class from inside the
  * definition of a derived class, I'll try to support it with this rule */
 	| interfacehdr ':' aIDENTIFIER requires
@@ -1041,6 +1062,11 @@ interfacedef: interfacehdr inherit requires
 
 interfacedec:
 	  interface ';'				{ $$ = $1; }
+	| interface '<' { push_parameters_namespace($1->name); } type_parameters '>' ';'
+						{ $$ = $1;
+						  type_parameterized_interface_declare($$, $4);
+						  pop_parameters_namespace($1->name);
+						}
 	| dispinterface ';'			{ $$ = $1; }
 	;
 
@@ -2017,6 +2043,29 @@ static void push_lookup_namespace(const char *name)
     lookup_namespace = namespace;
 }
 
+static void push_parameters_namespace(const char *name)
+{
+    struct namespace *namespace;
+
+    if (!(namespace = find_sub_namespace(current_namespace, name)))
+    {
+        namespace = xmalloc(sizeof(*namespace));
+        namespace->name = xstrdup(name);
+        namespace->parent = current_namespace;
+        list_add_tail(&current_namespace->children, &namespace->entry);
+        list_init(&namespace->children);
+        memset(namespace->type_hash, 0, sizeof(namespace->type_hash));
+    }
+
+    parameters_namespace = namespace;
+}
+
+static void pop_parameters_namespace(const char *name)
+{
+    assert(!strcmp(parameters_namespace->name, name) && parameters_namespace->parent);
+    parameters_namespace = NULL;
+}
+
 struct rtype {
   const char *name;
   type_t *type;
@@ -2148,7 +2197,8 @@ static type_t *find_qualified_type_or_error(const char *name, int t)
 static type_t *find_type_or_error(const char *name, int t)
 {
     type_t *type;
-    if (!(type = find_type(name, current_namespace, t)))
+    if (!(type = find_type(name, current_namespace, t)) &&
+        !(type = find_type(name, parameters_namespace, t)))
     {
         error_loc("type '%s' not found\n", name);
         return NULL;
@@ -2168,7 +2218,8 @@ int is_type(const char *name)
     if (lookup_namespace != &global_namespace)
         return find_type(name, lookup_namespace, 0) != NULL;
     else
-        return find_type(name, current_namespace, 0) != NULL;
+        return find_type(name, current_namespace, 0) != NULL ||
+               find_type(name, parameters_namespace, 0) != NULL;
 }
 
 int is_namespace(const char *name)
@@ -2666,6 +2717,8 @@ static int is_allowed_conf_type(const type_t *type)
     case TYPE_RUNTIMECLASS:
         return FALSE;
     case TYPE_APICONTRACT:
+    case TYPE_PARAMETERIZED_TYPE:
+    case TYPE_PARAMETER:
         /* not supposed to be here */
         assert(0);
         break;

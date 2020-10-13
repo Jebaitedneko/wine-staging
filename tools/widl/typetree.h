@@ -45,6 +45,8 @@ type_t *type_new_nonencapsulated_union(const char *name, int defined, var_list_t
 type_t *type_new_encapsulated_union(char *name, var_t *switch_field, var_t *union_field, var_list_t *cases);
 type_t *type_new_bitfield(type_t *field_type, const expr_t *bits);
 type_t *type_new_runtimeclass(char *name, struct namespace *namespace);
+void type_parameterized_interface_declare(type_t *type, type_list_t *params);
+void type_parameterized_interface_define(type_t *type, type_list_t *params, type_t *inherit, statement_list_t *stmts);
 void type_interface_define(type_t *iface, type_t *inherit, statement_list_t *stmts, type_list_t *requires);
 void type_dispinterface_define(type_t *iface, var_list_t *props, var_list_t *methods);
 void type_dispinterface_define_from_iface(type_t *dispiface, type_t *iface);
@@ -234,6 +236,8 @@ static inline int type_is_complete(const type_t *type)
     case TYPE_RUNTIMECLASS:
         return TRUE;
     case TYPE_APICONTRACT:
+    case TYPE_PARAMETERIZED_TYPE:
+    case TYPE_PARAMETER:
         assert(0);
         break;
     }
