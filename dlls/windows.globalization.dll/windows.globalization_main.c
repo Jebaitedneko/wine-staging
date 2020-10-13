@@ -132,8 +132,22 @@ static HRESULT STDMETHODCALLTYPE globalization_preferences_get_Languages(IGlobal
 static HRESULT STDMETHODCALLTYPE globalization_preferences_get_HomeGeographicRegion(IGlobalizationPreferencesStatics *iface,
         HSTRING* value)
 {
-    FIXME("iface %p, value %p stub!\n", iface, value);
-    return E_NOTIMPL;
+    UINT32 length;
+    WCHAR locale_w[LOCALE_NAME_MAX_LENGTH], *tmp;
+    const WCHAR *country;
+
+    TRACE("iface %p, value %p stub!\n", iface, value);
+
+    GetSystemDefaultLocaleName(locale_w, LOCALE_NAME_MAX_LENGTH);
+
+    if ((tmp = wcsrchr(locale_w, '_'))) *tmp = 0;
+    if (!(tmp = wcschr(locale_w, '-')) || (wcslen(tmp) > 3 && !(tmp = wcschr(tmp + 1, '-')))) country = L"US";
+    else country = tmp;
+    length = wcslen(country);
+
+    TRACE("returning country %s\n", debugstr_w(country));
+
+    return WindowsCreateString(country, length, value);
 }
 
 static HRESULT STDMETHODCALLTYPE globalization_preferences_get_WeekStartsOn(IGlobalizationPreferencesStatics *iface,
