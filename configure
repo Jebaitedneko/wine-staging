@@ -1373,6 +1373,7 @@ enable_fontsub
 enable_fusion
 enable_fwpuclnt
 enable_gameux
+enable_gcdef
 enable_gdi32
 enable_gdiplus
 enable_glu32
@@ -20507,6 +20508,7 @@ wine_fn_config_makefile dlls/fusion/tests enable_tests
 wine_fn_config_makefile dlls/fwpuclnt enable_fwpuclnt
 wine_fn_config_makefile dlls/gameux enable_gameux
 wine_fn_config_makefile dlls/gameux/tests enable_tests
+wine_fn_config_makefile dlls/gcdef enable_gcdef
 wine_fn_config_makefile dlls/gdi.exe16 enable_win16
 wine_fn_config_makefile dlls/gdi32 enable_gdi32
 wine_fn_config_makefile dlls/gdi32/tests enable_tests
