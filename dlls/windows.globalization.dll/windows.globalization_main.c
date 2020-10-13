@@ -264,21 +264,21 @@ static HRESULT STDMETHODCALLTYPE globalization_preferences_get_Calendars(IGlobal
         IVectorView_HSTRING **value)
 {
     FIXME("iface %p, value %p stub!\n", iface, value);
-    return E_NOTIMPL;
+    return hstring_vector_create(NULL, 0, value);
 }
 
 static HRESULT STDMETHODCALLTYPE globalization_preferences_get_Clocks(IGlobalizationPreferencesStatics *iface,
         IVectorView_HSTRING **value)
 {
     FIXME("iface %p, value %p stub!\n", iface, value);
-    return E_NOTIMPL;
+    return hstring_vector_create(NULL, 0, value);
 }
 
 static HRESULT STDMETHODCALLTYPE globalization_preferences_get_Currencies(IGlobalizationPreferencesStatics *iface,
         IVectorView_HSTRING **value)
 {
     FIXME("iface %p, value %p stub!\n", iface, value);
-    return E_NOTIMPL;
+    return hstring_vector_create(NULL, 0, value);
 }
 
 static HRESULT STDMETHODCALLTYPE globalization_preferences_get_Languages(IGlobalizationPreferencesStatics *iface,
