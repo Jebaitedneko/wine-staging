@@ -1382,6 +1382,7 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_
         GST_STATIC_PAD_TEMPLATE("mf_src", GST_PAD_SRC, GST_PAD_ALWAYS, GST_STATIC_CAPS_ANY);
 
     IMFStreamDescriptor **descriptors = NULL;
+    IMFAttributes *byte_stream_attributes;
     struct media_source *object;
     gint64 total_pres_time = 0;
     DWORD bytestream_caps;
@@ -1524,6 +1525,18 @@ static HRESULT media_source_constructor(IMFByteStream *bytestream, struct media_
 
     if (object->stream_count)
         IMFPresentationDescriptor_SetUINT64(object->pres_desc, &MF_PD_DURATION, total_pres_time / 100);
+
+    if (SUCCEEDED(IMFByteStream_QueryInterface(object->byte_stream, &IID_IMFAttributes, (void **)&byte_stream_attributes)))
+    {
+        WCHAR *mimeW = NULL;
+        DWORD length;
+        if (SUCCEEDED(IMFAttributes_GetAllocatedString(byte_stream_attributes, &MF_BYTESTREAM_CONTENT_TYPE, &mimeW, &length)))
+        {
+            IMFPresentationDescriptor_SetString(object->pres_desc, &MF_PD_MIME_TYPE, mimeW);
+            CoTaskMemFree(mimeW);
+        }
+        IMFAttributes_Release(byte_stream_attributes);
+    }
 
     object->state = SOURCE_STOPPED;
 
