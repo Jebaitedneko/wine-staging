@@ -38,10 +38,6 @@ struct unix_funcs
     /* other Win32 API functions */
     NTSTATUS      (WINAPI *DbgUiIssueRemoteBreakin)( HANDLE process );
     LONGLONG      (WINAPI *RtlGetSystemTimePrecise)(void);
-    NTSTATUS      (WINAPI *RtlWaitOnAddress)( const void *addr, const void *cmp, SIZE_T size,
-                                              const LARGE_INTEGER *timeout );
-    void          (WINAPI *RtlWakeAddressAll)( const void *addr );
-    void          (WINAPI *RtlWakeAddressSingle)( const void *addr );
 
     /* fast locks */
     NTSTATUS      (CDECL *fast_RtlpWaitForCriticalSection)( RTL_CRITICAL_SECTION *crit, int timeout );

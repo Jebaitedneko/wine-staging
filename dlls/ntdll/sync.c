@@ -36,6 +36,13 @@
 #include "wine/debug.h"
 #include "ntdll_misc.h"
 
+WINE_DEFAULT_DEBUG_CHANNEL(sync);
+
+static const char *debugstr_timeout( const LARGE_INTEGER *timeout )
+{
+    if (!timeout) return "(infinite)";
+    return wine_dbgstr_longlong( timeout->QuadPart );
+}
 
 /******************************************************************
  *              RtlRunOnceInitialize (NTDLL.@)
@@ -530,13 +537,143 @@ NTSTATUS WINAPI RtlSleepConditionVariableSRW( RTL_CONDITION_VARIABLE *variable, 
     return status;
 }
 
+/* The following functions define a lock-free array mapping thread IDs to
+ * values, which can be grown but not shrunk. We do this by allocating one slice
+ * of the array at a time, and storing a pointer to the next slice at the end.
+ *
+ * This is both for efficiency (we want this function to be as fast as possible)
+ * and because locking the TEB list is hard otherwise—we need to safely access
+ * the TEB list, but cannot do so using any of these synchronization primitives,
+ * and we may need to access the TEB list before being inserted into it (e.g.
+ * from heap locks, or the TEB list lock itself.)
+ */
+
+struct addr_wait_entry
+{
+    void *addr;
+    HANDLE tid;
+};
+
+struct addr_wait_array
+{
+    struct addr_wait_entry entries[(0x1000 - sizeof(struct addr_wait_entry *)) / sizeof(struct addr_wait_entry)];
+    struct addr_wait_array *next;
+};
+
+static struct addr_wait_array first_addr_wait_array;
+
+static struct addr_wait_entry *addr_wait_allocate_entry( HANDLE tid )
+{
+    struct addr_wait_array *array = &first_addr_wait_array;
+
+    for (;;)
+    {
+        struct addr_wait_array *new_array = NULL;
+        SIZE_T size = sizeof(*new_array);
+        unsigned int i;
+
+        for (;;)
+        {
+            for (i = 0; i < ARRAY_SIZE(array->entries); ++i)
+            {
+                if (!array->entries[i].tid && !InterlockedCompareExchangePointer( &array->entries[i].tid, tid, NULL ))
+                    return &array->entries[i];
+            }
+
+            if (!array->next) break;
+            array = array->next;
+        }
+
+        if (NtAllocateVirtualMemory( NtCurrentProcess(), (void **)&new_array, 0, &size, MEM_COMMIT, PAGE_READWRITE ))
+            return NULL;
+
+        if (InterlockedCompareExchangePointer( (void **)&array->next, new_array, NULL ))
+        {
+            /* another thread beat us to it */
+            NtFreeVirtualMemory( NtCurrentProcess(), (void **)&new_array, &size, MEM_RELEASE );
+        }
+        /* start searching again from the new array */
+        array = array->next;
+    }
+}
+
+void addr_wait_free_entry(void)
+{
+    struct addr_wait_entry *entry = NtCurrentTeb()->ReservedForPerf;
+    if (entry)
+        InterlockedExchangePointer( &entry->tid, NULL );
+}
+
+static BOOL compare_addr( const void *addr, const void *cmp, SIZE_T size )
+{
+    switch (size)
+    {
+        case 1:
+            return (*(const UCHAR *)addr == *(const UCHAR *)cmp);
+        case 2:
+            return (*(const USHORT *)addr == *(const USHORT *)cmp);
+        case 4:
+            return (*(const ULONG *)addr == *(const ULONG *)cmp);
+        case 8:
+            return (*(const ULONG64 *)addr == *(const ULONG64 *)cmp);
+    }
+
+    return FALSE;
+}
+
 /***********************************************************************
  *           RtlWaitOnAddress   (NTDLL.@)
  */
 NTSTATUS WINAPI RtlWaitOnAddress( const void *addr, const void *cmp, SIZE_T size,
                                   const LARGE_INTEGER *timeout )
 {
-    return unix_funcs->RtlWaitOnAddress( addr, cmp, size, timeout );
+    struct addr_wait_entry *entry = NtCurrentTeb()->ReservedForPerf;
+    NTSTATUS ret;
+
+    TRACE("addr %p cmp %p size %#Ix timeout %s\n", addr, cmp, size, debugstr_timeout( timeout ));
+
+    if (size != 1 && size != 2 && size != 4 && size != 8)
+        return STATUS_INVALID_PARAMETER;
+
+    if (!entry)
+    {
+        if (!(entry = addr_wait_allocate_entry( NtCurrentTeb()->ClientId.UniqueThread )))
+            return STATUS_NO_MEMORY;
+        NtCurrentTeb()->ReservedForPerf = entry;
+    }
+
+    InterlockedExchangePointer( &entry->addr, (void *)addr );
+
+    /* Ensure that the compare-and-swap above is ordered before the comparison
+     * below. This barrier is paired with another in RtlWakeByAddress*().
+     *
+     * In more detail, given the following sequence:
+     *
+     * Thread A                                 Thread B
+     * -----------------------------------------------------------------
+     * RtlWaitOnAddress( &val );                val = 1;
+     * queue thread                             RtlWakeByAddress( &val );
+     * MemoryBarrier(); <---- paired with ----> MemoryBarrier();
+     * compare_addr( &val );                    if (thread is queued)
+     *
+     * We must ensure that the thread is queued [through the above
+     * InterlockedExchangePointer()] before reading "val", and that writes to
+     * "val" by the application happen before we check for queued threads.
+     * Otherwise, thread A can deadlock: "val" may appear unchanged, while
+     * thread B observed that thread A was not queued.
+     */
+    MemoryBarrier();
+
+    if (!compare_addr( addr, cmp, size ))
+    {
+        InterlockedExchangePointer( &entry->addr, NULL );
+        return STATUS_SUCCESS;
+    }
+
+    ret = NtWaitForAlertByThreadId( NULL, timeout );
+    InterlockedExchangePointer( &entry->addr, NULL );
+    if (ret == STATUS_ALERTED) ret = STATUS_SUCCESS;
+    return ret;
 }
 
 /***********************************************************************
@@ -544,7 +681,26 @@ NTSTATUS WINAPI RtlWaitOnAddress( const void *addr, const void *cmp, SIZE_T size
  */
 void WINAPI RtlWakeAddressAll( const void *addr )
 {
-    return unix_funcs->RtlWakeAddressAll( addr );
+    struct addr_wait_array *array;
+    unsigned int i;
+
+    TRACE("%p\n", addr);
+
+    if (!addr) return;
+
+    /* Ensure that memory stores to "addr" are ordered before reading the
+     * array below. Paired with another barrier in RtlWaitOnAddress() [q.v.].
+     */
+    MemoryBarrier();
+
+    for (array = &first_addr_wait_array; array != NULL; array = array->next)
+    {
+        for (i = 0; i < ARRAY_SIZE(array->entries); ++i)
+        {
+            if (array->entries[i].addr == addr)
+                NtAlertThreadByThreadId( array->entries[i].tid );
+        }
+    }
 }
 
 /***********************************************************************
@@ -552,5 +708,28 @@ void WINAPI RtlWakeAddressAll( const void *addr )
  */
 void WINAPI RtlWakeAddressSingle( const void *addr )
 {
-    return unix_funcs->RtlWakeAddressSingle( addr );
+    struct addr_wait_array *array;
+    unsigned int i;
+
+    TRACE("%p\n", addr);
+
+    if (!addr) return;
+
+    /* Ensure that memory stores to "addr" are ordered before reading the
+     * array below. Paired with another barrier in RtlWaitOnAddress() [q.v.].
+     */
+    MemoryBarrier();
+
+    for (array = &first_addr_wait_array; array != NULL; array = array->next)
+    {
+        for (i = 0; i < ARRAY_SIZE(array->entries); ++i)
+        {
+            if (array->entries[i].addr == addr
+                    && InterlockedCompareExchangePointer( &array->entries[i].addr, NULL, (void *)addr ) == addr)
+            {
+                NtAlertThreadByThreadId( array->entries[i].tid );
+                return;
+            }
+        }
+    }
 }

@@ -87,6 +87,8 @@ extern const struct unix_funcs *unix_funcs DECLSPEC_HIDDEN;
 
 extern struct _KUSER_SHARED_DATA *user_shared_data DECLSPEC_HIDDEN;
 
+extern void addr_wait_free_entry(void) DECLSPEC_HIDDEN;
+
 /* locale */
 extern LCID user_lcid, system_lcid;
 extern DWORD ntdll_umbstowcs( const char* src, DWORD srclen, WCHAR* dst, DWORD dstlen ) DECLSPEC_HIDDEN;
