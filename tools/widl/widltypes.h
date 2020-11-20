@@ -426,6 +426,11 @@ struct alias_details
     struct _decl_spec_t aliasee;
 };
 
+struct runtimeclass_details
+{
+    ifref_list_t *ifaces;
+};
+
 #define HASHMAX 64
 
 struct namespace {
@@ -453,6 +458,7 @@ enum type_type
     TYPE_ARRAY,
     TYPE_BITFIELD,
     TYPE_APICONTRACT,
+    TYPE_RUNTIMECLASS,
 };
 
 struct _type_t {
@@ -473,6 +479,7 @@ struct _type_t {
     struct pointer_details pointer;
     struct bitfield_details bitfield;
     struct alias_details alias;
+    struct runtimeclass_details runtimeclass;
   } details;
   const char *c_name;
   unsigned int typestring_offset;
