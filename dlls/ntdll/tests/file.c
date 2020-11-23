@@ -5401,8 +5401,8 @@ static void test_reparse_points(void)
     ok(handle != INVALID_HANDLE_VALUE, "Failed to open symlink file.\n");
     todo_wine ok(GetFileSize(handle, NULL) == 0, "symlink size is not zero\n");
     bret = ReadFile(handle, &buf, sizeof(buf), &dwLen, NULL);
-    ok(bret, "Failed to read data from the symlink.\n");
-    todo_wine ok(dwLen == 0, "Length of symlink data is not zero.\n");
+    todo_wine ok(bret, "Failed to read data from the symlink.\n");
+    ok(dwLen == 0, "Length of symlink data is not zero.\n");
     CloseHandle(handle);
 
     /* Check the size/data of the symlink target */
