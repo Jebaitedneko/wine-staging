@@ -5280,6 +5280,11 @@ NTSTATUS WINAPI NtReadFile( HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc, vo
             goto done;
         }
     }
+    else if (type == FD_TYPE_SYMLINK)
+    {
+        status = STATUS_SUCCESS;
+        goto done;
+    }
 
     if (type == FD_TYPE_SERIAL && async_read && length)
     {
