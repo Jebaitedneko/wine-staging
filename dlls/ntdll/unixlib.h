@@ -38,14 +38,6 @@ struct unix_funcs
     NTSTATUS      (WINAPI *DbgUiIssueRemoteBreakin)( HANDLE process );
     LONGLONG      (WINAPI *RtlGetSystemTimePrecise)(void);
 
-    /* fast locks */
-    NTSTATUS      (CDECL *fast_RtlTryAcquireSRWLockExclusive)( RTL_SRWLOCK *lock );
-    NTSTATUS      (CDECL *fast_RtlAcquireSRWLockExclusive)( RTL_SRWLOCK *lock );
-    NTSTATUS      (CDECL *fast_RtlTryAcquireSRWLockShared)( RTL_SRWLOCK *lock );
-    NTSTATUS      (CDECL *fast_RtlAcquireSRWLockShared)( RTL_SRWLOCK *lock );
-    NTSTATUS      (CDECL *fast_RtlReleaseSRWLockExclusive)( RTL_SRWLOCK *lock );
-    NTSTATUS      (CDECL *fast_RtlReleaseSRWLockShared)( RTL_SRWLOCK *lock );
-
     /* math functions */
     double        (CDECL *atan)( double d );
     double        (CDECL *ceil)( double d );
