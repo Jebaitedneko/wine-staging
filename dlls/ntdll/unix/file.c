@@ -4553,7 +4553,9 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE handle, IO_STATUS_BLOCK *io,
         {
             FILE_ATTRIBUTE_TAG_INFORMATION *info = ptr;
             info->FileAttributes = attr;
-            info->ReparseTag = 0; /* FIXME */
+            info->ReparseTag = 0;
+            if (attr & FILE_ATTRIBUTE_REPARSE_POINT)
+                get_symlink_properties( fd, "", NULL, NULL, &info->ReparseTag, NULL, NULL );
             if ((options & FILE_OPEN_REPARSE_POINT) && fd_is_mount_point( fd, &st ))
                 info->ReparseTag = IO_REPARSE_TAG_MOUNT_POINT;
         }
