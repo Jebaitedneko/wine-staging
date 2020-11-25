@@ -5403,7 +5403,7 @@ static void test_reparse_points(void)
     handle = CreateFileW(reparse_path, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING,
                          FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0);
     ok(handle != INVALID_HANDLE_VALUE, "Failed to open symlink file.\n");
-    todo_wine ok(GetFileSize(handle, NULL) == 0, "symlink size is not zero\n");
+    ok(GetFileSize(handle, NULL) == 0, "symlink size is not zero\n");
     bret = ReadFile(handle, &buf, sizeof(buf), &dwLen, NULL);
     ok(bret, "Failed to read data from the symlink.\n");
     ok(dwLen == 0, "Length of symlink data is not zero.\n");

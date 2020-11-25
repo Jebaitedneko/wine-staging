@@ -1614,6 +1614,8 @@ static inline int get_file_xattr( char *hexattr, int attrlen )
 
 NTSTATUS FILE_DecodeSymlink(const char *unix_src, char *unix_dest, int *unix_dest_len,
                             DWORD *tag, ULONG *flags, BOOL *is_dir);
+NTSTATUS get_symlink_properties(const char *target, int len, char *unix_dest, int *unix_dest_len,
+                                DWORD *tag, ULONG *flags, BOOL *is_dir);
 
 /* fetch the attributes of a file */
 static inline ULONG get_file_attributes( const struct stat *st )
@@ -1650,6 +1652,22 @@ static int fd_get_file_info( int fd, unsigned int options, struct stat *st, ULON
     /* consider mount points to be reparse points (IO_REPARSE_TAG_MOUNT_POINT) */
     if ((options & FILE_OPEN_REPARSE_POINT) && fd_is_mount_point( fd, st ))
         *attr |= FILE_ATTRIBUTE_REPARSE_POINT;
+    if (S_ISLNK( st->st_mode ))
+    {
+        char path[MAX_PATH];
+        ssize_t len;
+        BOOL is_dir;
+
+        if ((len = readlinkat( fd, "", path, sizeof(path))) == -1) goto done;
+        /* symbolic links (either junction points or NT symlinks) are "reparse points" */
+        *attr |= FILE_ATTRIBUTE_REPARSE_POINT;
+        /* symbolic links always report size 0 */
+        st->st_size = 0;
+        if (get_symlink_properties(path, len, NULL, NULL, NULL, NULL, &is_dir) == STATUS_SUCCESS)
+            st->st_mode = (st->st_mode & ~S_IFMT) | (is_dir ? S_IFDIR : S_IFREG);
+    }
+
+done:
     return ret;
 }
 
@@ -6136,41 +6154,22 @@ cleanup:
 }
 
 
-NTSTATUS FILE_DecodeSymlink(const char *unix_src, char *unix_dest, int *unix_dest_len,
-                            DWORD *tag, ULONG *flags, BOOL *is_dir)
+NTSTATUS get_symlink_properties(const char *target, int len, char *unix_dest, int *unix_dest_len,
+                                DWORD *tag, ULONG *flags, BOOL *is_dir)
 {
-    int len = MAX_PATH;
+    const char *p = target;
     DWORD reparse_tag;
-    NTSTATUS status;
     BOOL dir_flag;
-    char *p, *tmp;
-    ssize_t ret;
     int i;
 
-    if (unix_dest_len) len = *unix_dest_len;
-    if (!unix_dest)
-        tmp = malloc( len );
-    else
-        tmp = unix_dest;
-    if ((ret = readlink( unix_src, tmp, len )) < 0)
-    {
-        status = errno_to_status( errno );
-        goto cleanup;
-    }
-    len = ret;
-
     /* Decode the reparse tag from the symlink */
-    p = tmp;
     if (*p == '.')
     {
         if (flags) *flags = SYMLINK_FLAG_RELATIVE;
         p++;
     }
     if (*p++ != '/')
-    {
-        status = STATUS_NOT_IMPLEMENTED;
-        goto cleanup;
-    }
+        return STATUS_NOT_IMPLEMENTED;
     reparse_tag = 0;
     for (i = 0; i < sizeof(ULONG)*8; i++)
     {
@@ -6182,10 +6181,7 @@ NTSTATUS FILE_DecodeSymlink(const char *unix_src, char *unix_dest, int *unix_des
         else if (c == '.' && *p++ == '/')
             val = 1;
         else
-        {
-            status = STATUS_NOT_IMPLEMENTED;
-            goto cleanup;
-        }
+            return STATUS_NOT_IMPLEMENTED;
         reparse_tag |= (val << i);
     }
     /* skip past the directory/file flag */
@@ -6198,19 +6194,39 @@ NTSTATUS FILE_DecodeSymlink(const char *unix_src, char *unix_dest, int *unix_des
         else if (c == '.' && *p++ == '/')
             dir_flag = TRUE;
         else
-        {
-            status = STATUS_NOT_IMPLEMENTED;
-            goto cleanup;
-        }
+            return STATUS_NOT_IMPLEMENTED;
     }
     else
         dir_flag = TRUE;
-    len -= (p - tmp);
+    len -= (p - target);
     if (tag) *tag = reparse_tag;
     if (is_dir) *is_dir = dir_flag;
     if (unix_dest) memmove(unix_dest, p, len + 1);
     if (unix_dest_len) *unix_dest_len = len;
-    status = STATUS_SUCCESS;
+    return STATUS_SUCCESS;
+}
+
+
+NTSTATUS FILE_DecodeSymlink(const char *unix_src, char *unix_dest, int *unix_dest_len,
+                            DWORD *tag, ULONG *flags, BOOL *is_dir)
+{
+    int len = MAX_PATH;
+    NTSTATUS status;
+    ssize_t ret;
+    char *tmp;
+
+    if (unix_dest_len) len = *unix_dest_len;
+    if (!unix_dest)
+        tmp = malloc( len );
+    else
+        tmp = unix_dest;
+    if ((ret = readlink( unix_src, tmp, len )) < 0)
+    {
+        status = errno_to_status( errno );
+        goto cleanup;
+    }
+    len = ret;
+    status = get_symlink_properties(tmp, len, unix_dest, unix_dest_len, tag, flags, is_dir);
 
 cleanup:
     if (!unix_dest) free( tmp );
