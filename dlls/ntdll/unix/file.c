@@ -4421,7 +4421,16 @@ NTSTATUS WINAPI NtQueryInformationFile( HANDLE handle, IO_STATUS_BLOCK *io,
         {
             FILE_ATTRIBUTE_TAG_INFORMATION *info = ptr;
             info->FileAttributes = attr;
-            info->ReparseTag = 0; /* FIXME */
+            info->ReparseTag = 0;
+            if (attr & FILE_ATTRIBUTE_REPARSE_POINT)
+            {
+                char path[MAX_PATH];
+                ssize_t len;
+                BOOL is_dir;
+
+                if ((len = readlinkat( fd, "", path, sizeof(path))) != -1)
+                    get_symlink_properties(path, len, NULL, NULL, &info->ReparseTag, NULL, &is_dir);
+            }
             if ((options & FILE_OPEN_REPARSE_POINT) && fd_is_mount_point( fd, &st ))
                 info->ReparseTag = IO_REPARSE_TAG_MOUNT_POINT;
         }
