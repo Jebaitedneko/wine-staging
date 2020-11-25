@@ -5215,6 +5215,7 @@ static void test_reparse_points(void)
     static WCHAR volW[] = {'c',':','\\',0};
     REPARSE_GUID_DATA_BUFFER guid_buffer;
     static const WCHAR dotW[] = {'.',0};
+    FILE_ATTRIBUTE_TAG_INFORMATION info;
     REPARSE_DATA_BUFFER *buffer = NULL;
     DWORD dwret, dwLen, dwFlags, err;
     WIN32_FILE_ATTRIBUTE_DATA fad;
@@ -5224,6 +5225,7 @@ static void test_reparse_points(void)
     IO_STATUS_BLOCK iosb;
     UNICODE_STRING nameW;
     TOKEN_PRIVILEGES tp;
+    NTSTATUS status;
     WCHAR *dest;
     LUID luid;
     BOOL bret;
@@ -5402,6 +5404,10 @@ static void test_reparse_points(void)
     bret = ReadFile(handle, &buf, sizeof(buf), &dwLen, NULL);
     ok(bret, "Failed to read data from the symlink.\n");
     ok(dwLen == 0, "Length of symlink data is not zero.\n");
+    memset(&info, 0x0, sizeof(info));
+    status = pNtQueryInformationFile(handle, &iosb, &info, sizeof(info), FileAttributeTagInformation);
+    ok( status == STATUS_SUCCESS, "got %#x\n", status );
+    ok( info.ReparseTag == IO_REPARSE_TAG_SYMLINK, "got reparse tag %#x\n", info.ReparseTag );
     CloseHandle(handle);
 
     /* Check the size/data of the symlink target */
