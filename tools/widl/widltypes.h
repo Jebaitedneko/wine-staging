@@ -504,6 +504,7 @@ struct _type_t {
     struct delegate_details delegate;
   } details;
   const char *c_name;
+  const char *signature;
   unsigned int typestring_offset;
   unsigned int ptrdesc;           /* used for complex structs */
   int typelib_idx;
@@ -659,6 +660,7 @@ void init_loc_info(loc_info_t *);
 char *format_namespace(struct namespace *namespace, const char *prefix, const char *separator, const char *suffix,
                        const char *abi_prefix);
 char *format_parameterized_type_name(type_t *type, type_list_t *params);
+char *format_type_signature(type_t *type);
 
 static inline enum type_type type_get_type_detect_alias(const type_t *type)
 {

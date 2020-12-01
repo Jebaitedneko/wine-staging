@@ -80,6 +80,16 @@ static inline enum type_type type_get_type(const type_t *type)
     return type_get_type_detect_alias(type_get_real_type(type));
 }
 
+static inline const GUID *type_get_uuid(const type_t *type)
+{
+    static const GUID empty;
+    attr_t *attr;
+    LIST_FOR_EACH_ENTRY(attr, type->attrs, attr_t, entry)
+        if (attr->type == ATTR_UUID) return attr->u.pval;
+    error("type '%s' uuid not found\n", type->name);
+    return &empty;
+}
+
 static inline enum type_basic_type type_basic_get_type(const type_t *type)
 {
     type = type_get_real_type(type);
