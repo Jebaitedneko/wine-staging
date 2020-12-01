@@ -1084,6 +1084,17 @@ delegatedef:
 						  type_delegate_define($$, append_statement(NULL, make_statement_delegate($3, $6)));
 						  check_async_uuid($$);
 						}
+	| m_attributes tDELEGATE type ident
+	  '<' { push_parameters_namespace($4->name); } type_parameters '>'
+	  '(' m_args ')'
+	  semicolon_opt				{ $$ = get_type(TYPE_DELEGATE, $4->name, current_namespace, 0);
+						  check_def($$);
+						  $$->attrs = check_iface_attrs($$->name, $1);
+						  $$->defined = TRUE;
+						  type_parameterized_delegate_define($$, $7, append_statement(NULL, make_statement_delegate($3, $10)));
+						  check_async_uuid($$);
+						  pop_parameters_namespace($4->name);
+						}
 	;
 
 required_types:

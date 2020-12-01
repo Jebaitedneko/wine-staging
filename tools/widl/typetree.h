@@ -53,6 +53,7 @@ void type_parameterized_interface_declare(type_t *type, type_list_t *params);
 void type_parameterized_interface_define(type_t *type, type_list_t *params, type_t *inherit, statement_list_t *stmts);
 void type_interface_define(type_t *iface, type_t *inherit, statement_list_t *stmts, type_list_t *requires);
 void type_delegate_define(type_t *iface, statement_list_t *stmts);
+void type_parameterized_delegate_define(type_t *type, type_list_t *params, statement_list_t *stmts);
 void type_dispinterface_define(type_t *iface, var_list_t *props, var_list_t *methods);
 void type_dispinterface_define_from_iface(type_t *dispiface, type_t *iface);
 void type_module_define(type_t *module, statement_list_t *stmts);
