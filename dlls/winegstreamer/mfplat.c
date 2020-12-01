@@ -407,6 +407,8 @@ static const GUID CLSID_GStreamerByteStreamHandler = {0x317df618, 0x5e5a, 0x468a
 
 static const GUID CLSID_WINEAudioConverter = {0x6a170414,0xaad9,0x4693,{0xb8,0x06,0x3a,0x0c,0x47,0xc5,0x70,0xd6}};
 
+static GUID CLSID_WINEColorConverter = {0x2be8b27f,0xcd60,0x4b8a,{0x95,0xae,0xd1,0x74,0xcc,0x5c,0xba,0xa7}};
+
 static const struct class_object
 {
     const GUID *clsid;
@@ -417,6 +419,7 @@ class_objects[] =
     { &CLSID_VideoProcessorMFT, &video_processor_create },
     { &CLSID_GStreamerByteStreamHandler, &winegstreamer_stream_handler_create },
     { &CLSID_WINEAudioConverter, &audio_converter_create },
+    { &CLSID_WINEColorConverter, &color_converter_create },
 };
 
 HRESULT mfplat_get_class_object(REFCLSID rclsid, REFIID riid, void **obj)
