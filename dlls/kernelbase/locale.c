@@ -2335,126 +2335,6 @@ static int map_to_halfwidth( WCHAR c, WCHAR *dst, int dstlen )
     return 1;
 }
 
-
-/* 32-bit collation element table format:
- * unicode weight - high 16 bit, diacritic weight - high 8 bit of low 16 bit,
- * case weight - high 4 bit of low 8 bit.
- */
-
-enum weight { UNICODE_WEIGHT, DIACRITIC_WEIGHT, CASE_WEIGHT };
-
-static unsigned int get_weight( WCHAR ch, enum weight type )
-{
-    unsigned int ret;
-
-    ret = collation_table[collation_table[collation_table[ch >> 8] + ((ch >> 4) & 0x0f)] + (ch & 0xf)];
-    if (ret == ~0u) return ch;
-
-    switch (type)
-    {
-    case UNICODE_WEIGHT:   return ret >> 16;
-    case DIACRITIC_WEIGHT: return (ret >> 8) & 0xff;
-    case CASE_WEIGHT:      return (ret >> 4) & 0x0f;
-    default:               return 0;
-    }
-}
-
-
-static void inc_str_pos( const WCHAR **str, int *len, unsigned int *dpos, unsigned int *dlen )
-{
-    (*dpos)++;
-    if (*dpos == *dlen)
-    {
-        *dpos = *dlen = 0;
-        (*str)++;
-        (*len)--;
-    }
-}
-
-
-static int compare_weights(int flags, const WCHAR *str1, int len1,
-                           const WCHAR *str2, int len2, enum weight type )
-{
-    unsigned int ce1, ce2, dpos1 = 0, dpos2 = 0, dlen1 = 0, dlen2 = 0;
-    const WCHAR *dstr1 = NULL, *dstr2 = NULL;
-
-    while (len1 > 0 && len2 > 0)
-    {
-        if (!dlen1 && !(dstr1 = get_decomposition( *str1, &dlen1 ))) dstr1 = str1;
-        if (!dlen2 && !(dstr2 = get_decomposition( *str2, &dlen2 ))) dstr2 = str2;
-
-        if (flags & NORM_IGNORESYMBOLS)
-        {
-            int skip = 0;
-            /* FIXME: not tested */
-            if (get_char_type( CT_CTYPE1, dstr1[dpos1] ) & (C1_PUNCT | C1_SPACE))
-            {
-                inc_str_pos( &str1, &len1, &dpos1, &dlen1 );
-                skip = 1;
-            }
-            if (get_char_type( CT_CTYPE1, dstr2[dpos2] ) & (C1_PUNCT | C1_SPACE))
-            {
-                inc_str_pos( &str2, &len2, &dpos2, &dlen2 );
-                skip = 1;
-            }
-            if (skip) continue;
-        }
-
-       /* hyphen and apostrophe are treated differently depending on
-        * whether SORT_STRINGSORT specified or not
-        */
-        if (type == UNICODE_WEIGHT && !(flags & SORT_STRINGSORT))
-        {
-            if (dstr1[dpos1] == '-' || dstr1[dpos1] == '\'')
-            {
-                if (dstr2[dpos2] != '-' && dstr2[dpos2] != '\'')
-                {
-                    inc_str_pos( &str1, &len1, &dpos1, &dlen1 );
-                    continue;
-                }
-            }
-            else if (dstr2[dpos2] == '-' || dstr2[dpos2] == '\'')
-            {
-                inc_str_pos( &str2, &len2, &dpos2, &dlen2 );
-                continue;
-            }
-        }
-
-        ce1 = get_weight( dstr1[dpos1], type );
-        if (!ce1)
-        {
-            inc_str_pos( &str1, &len1, &dpos1, &dlen1 );
-            continue;
-        }
-        ce2 = get_weight( dstr2[dpos2], type );
-        if (!ce2)
-        {
-            inc_str_pos( &str2, &len2, &dpos2, &dlen2 );
-            continue;
-        }
-
-        if (ce1 - ce2) return ce1 - ce2;
-
-        inc_str_pos( &str1, &len1, &dpos1, &dlen1 );
-        inc_str_pos( &str2, &len2, &dpos2, &dlen2 );
-    }
-    while (len1)
-    {
-        if (!dlen1 && !(dstr1 = get_decomposition( *str1, &dlen1 ))) dstr1 = str1;
-        ce1 = get_weight( dstr1[dpos1], type );
-        if (ce1) break;
-        inc_str_pos( &str1, &len1, &dpos1, &dlen1 );
-    }
-    while (len2)
-    {
-        if (!dlen2 && !(dstr2 = get_decomposition( *str2, &dlen2 ))) dstr2 = str2;
-        ce2 = get_weight( dstr2[dpos2], type );
-        if (ce2) break;
-        inc_str_pos( &str2, &len2, &dpos2, &dlen2 );
-    }
-    return len1 - len2;
-}
-
 enum sortkey_special_script
 {
     SORTKEY_UNSORTABLE  = 0,
@@ -2492,6 +2372,7 @@ struct sortkey_data
     BYTE *buffer;
     int buffer_pos;
     int buffer_len;
+    BOOL is_compare_string;
 };
 
 static DWORD sortkey_get_exception(WCHAR ch, const struct sortguid *locale)
@@ -2703,7 +2584,10 @@ static void sortkey_add_diacritic_weights(struct sortkey_data *data, int flags, 
         if (old_pos >= diacritic_start_pos)
         {
             if (old_pos < data->buffer_len)
+            {
                 data->buffer[old_pos] += info.weight_diacritic; /* Overflow can happen, that's okay */
+                *last_weighted_pos = data->buffer_pos;
+            }
         }
         else
             sortkey_add_diacritic_weight(data, info.weight_diacritic, last_weighted_pos);
@@ -2912,6 +2796,7 @@ static int sortkey_generate(int flags, const WCHAR *locale_name, const WCHAR *st
     data.buffer = buffer;
     data.buffer_pos = 0;
     data.buffer_len = buffer ? buffer_len : 0;
+    data.is_compare_string = FALSE;
 
     if (str_len == -1)
         str_len = wcslen(str);
@@ -2960,6 +2845,155 @@ static int sortkey_generate(int flags, const WCHAR *locale_name, const WCHAR *st
 
     return 0;
 }
+
+static int early_exit_sortkey_comparison(const struct sortkey_data* data1, const struct sortkey_data* data2, int start_index)
+{
+    int i;
+    int end_index = min(data1->buffer_pos, data2->buffer_pos);
+
+    for (i = start_index; i < end_index; i++)
+    {
+        BYTE weight1 = data1->buffer[i];
+        BYTE weight2 = data2->buffer[i];
+
+        if (weight1 > weight2) return CSTR_GREATER_THAN;
+        if (weight1 < weight2) return CSTR_LESS_THAN;
+    }
+
+    return CSTR_EQUAL;
+}
+
+static int sortkey_compare(int flags, const WCHAR *locale_name, const WCHAR *str1, int str1_len, const WCHAR *str2, int str2_len)
+{
+    int i1, i2;
+    int ret;
+    struct sortkey_data data1, data2;
+    const struct sortguid *locale = get_language_sort(locale_name);
+    int diacritic_start_pos1;
+    int last_weighted_pos1;
+    int diacritic_start_pos2;
+    int last_weighted_pos2;
+    int pos_weight_compare;
+
+    BYTE buffer1[10000];
+    BYTE buffer2[10000];
+
+    data1.buffer = buffer1;
+    data1.buffer_pos = 0;
+    data1.buffer_len = sizeof(buffer1);
+    data1.is_compare_string = TRUE;
+
+    data2.buffer = buffer2;
+    data2.buffer_pos = 0;
+    data2.buffer_len = sizeof(buffer2);
+    data2.is_compare_string = TRUE;
+
+    /* Main weights */
+    for (i1 = 0, i2 = 0; i1 < str1_len || i2 < str2_len; i1++, i2++)
+    {
+        int pos_weight_compare = min(data1.buffer_pos, data2.buffer_pos);
+        if (i1 < str1_len)
+        {
+            sortkey_add_main_weights(&data1, flags, str1[i1], locale);
+        }
+        if (i2 < str2_len)
+        {
+            sortkey_add_main_weights(&data2, flags, str2[i2], locale);
+        }
+
+        /* For clear differences we must return early without reading all characters. See tests. */
+        ret = early_exit_sortkey_comparison(&data1, &data2, pos_weight_compare);
+        if (ret != CSTR_EQUAL)
+            return ret;
+    }
+
+    if (data1.buffer_pos > data2.buffer_pos)
+        return CSTR_GREATER_THAN;
+    if (data1.buffer_pos < data2.buffer_pos)
+        return CSTR_LESS_THAN;
+
+    diacritic_start_pos1 = data1.buffer_pos;
+    last_weighted_pos1 = data1.buffer_pos;
+    diacritic_start_pos2 = data2.buffer_pos;
+    last_weighted_pos2 = data2.buffer_pos;
+    pos_weight_compare = min(data1.buffer_pos, data2.buffer_pos);
+
+    /* Diacritic weights */
+    if (!(flags & NORM_IGNORENONSPACE))
+    {
+        for (i1 = 0, i2 = 0; i1 < str1_len || i2 < str2_len; i1++, i2++)
+        {
+            if (i1 < str1_len)
+            {
+                sortkey_add_diacritic_weights(&data1, flags, str1[i1], &last_weighted_pos1, diacritic_start_pos1, locale);
+            }
+            if (i2 < str2_len)
+            {
+                sortkey_add_diacritic_weights(&data2, flags, str2[i2], &last_weighted_pos2, diacritic_start_pos2, locale);
+            }
+        }
+        data1.buffer_pos = last_weighted_pos1;
+        data2.buffer_pos = last_weighted_pos2;
+
+        ret = early_exit_sortkey_comparison(&data1, &data2, pos_weight_compare);
+        if (ret != CSTR_EQUAL)
+            return ret;
+
+        if (data1.buffer_pos > data2.buffer_pos)
+            return CSTR_GREATER_THAN;
+        if (data1.buffer_pos < data2.buffer_pos)
+            return CSTR_LESS_THAN;
+    }
+
+    /* Case weights */
+    for (i1 = 0, i2 = 0; i1 < str1_len || i2 < str2_len; i1++, i2++)
+    {
+        int pos_weight_compare = min(data1.buffer_pos, data2.buffer_pos);
+        if (i1 < str1_len)
+        {
+            sortkey_add_case_weights(&data1, flags, str1[i1], locale);
+        }
+        if (i2 < str2_len)
+        {
+            sortkey_add_case_weights(&data2, flags, str2[i2], locale);
+        }
+
+        ret = early_exit_sortkey_comparison(&data1, &data2, pos_weight_compare);
+        if (ret != CSTR_EQUAL)
+            return ret;
+    }
+
+    if (data1.buffer_pos > data2.buffer_pos)
+       return CSTR_GREATER_THAN;
+    if (data1.buffer_pos < data2.buffer_pos)
+       return CSTR_LESS_THAN;
+
+    /* Special weights */
+    for (i1 = 0, i2 = 0; i1 < str1_len || i2 < str2_len; i1++, i2++)
+    {
+        int pos_weight_compare = min(data1.buffer_pos, data2.buffer_pos);
+        if (i1 < str1_len)
+        {
+            sortkey_add_special_weights(&data1, flags, str1[i1], locale);
+        }
+        if (i2 < str2_len)
+        {
+            sortkey_add_special_weights(&data2, flags, str2[i2], locale);
+        }
+
+        ret = early_exit_sortkey_comparison(&data1, &data2, pos_weight_compare);
+        if (ret != CSTR_EQUAL)
+            return ret;
+    }
+
+    if (data1.buffer_pos > data2.buffer_pos)
+       return CSTR_GREATER_THAN;
+    if (data1.buffer_pos < data2.buffer_pos)
+       return CSTR_LESS_THAN;
+
+    return CSTR_EQUAL;
+}
+
 
 static const struct geoinfo *get_geoinfo_ptr( GEOID geoid )
 {
@@ -3434,16 +3468,8 @@ INT WINAPI CompareStringEx( const WCHAR *locale, DWORD flags, const WCHAR *str1,
     if (len1 < 0) len1 = lstrlenW(str1);
     if (len2 < 0) len2 = lstrlenW(str2);
 
-    ret = compare_weights( flags, str1, len1, str2, len2, UNICODE_WEIGHT );
-    if (!ret)
-    {
-        if (!(flags & NORM_IGNORENONSPACE))
-            ret = compare_weights( flags, str1, len1, str2, len2, DIACRITIC_WEIGHT );
-        if (!ret && !(flags & NORM_IGNORECASE))
-            ret = compare_weights( flags, str1, len1, str2, len2, CASE_WEIGHT );
-    }
-    if (!ret) return CSTR_EQUAL;
-    return (ret < 0) ? CSTR_LESS_THAN : CSTR_GREATER_THAN;
+    ret = sortkey_compare(flags, locale, str1, len1, str2, len2);
+    return ret;
 }
 
 
