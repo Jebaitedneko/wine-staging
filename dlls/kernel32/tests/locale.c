@@ -1955,16 +1955,16 @@ static void test_CompareStringA(void)
        "a\\0b vs a expected CSTR_EQUAL or CSTR_GREATER_THAN, got %d\n", ret);
 
     ret = CompareStringA(lcid, 0, "\2", 2, "\1", 2);
-    todo_wine ok(ret != CSTR_EQUAL, "\\2 vs \\1 expected unequal\n");
+    ok(ret != CSTR_EQUAL, "\\2 vs \\1 expected unequal\n");
 
     ret = CompareStringA(lcid, NORM_IGNORECASE | LOCALE_USE_CP_ACP, "#", -1, ".", -1);
-    todo_wine ok(ret == CSTR_LESS_THAN, "\"#\" vs \".\" expected CSTR_LESS_THAN, got %d\n", ret);
+    ok(ret == CSTR_LESS_THAN, "\"#\" vs \".\" expected CSTR_LESS_THAN, got %d\n", ret);
 
     ret = CompareStringA(lcid, NORM_IGNORECASE, "_", -1, ".", -1);
-    todo_wine ok(ret == CSTR_GREATER_THAN, "\"_\" vs \".\" expected CSTR_GREATER_THAN, got %d\n", ret);
+    ok(ret == CSTR_GREATER_THAN, "\"_\" vs \".\" expected CSTR_GREATER_THAN, got %d\n", ret);
 
     ret = lstrcmpiA("#", ".");
-    todo_wine ok(ret == -1, "\"#\" vs \".\" expected -1, got %d\n", ret);
+    ok(ret == -1, "\"#\" vs \".\" expected -1, got %d\n", ret);
 
     lcid = MAKELCID(MAKELANGID(LANG_POLISH, SUBLANG_DEFAULT), SORT_DEFAULT);
 
@@ -2045,9 +2045,9 @@ static void test_CompareStringW(void)
     ok(ret == CSTR_EQUAL, "expected CSTR_EQUAL, got %d\n", ret);
 
     ret = CompareStringW(CP_ACP, NORM_IGNORENONSPACE, ABC_EE, 3, A_ACUTE_BC, 4);
-    todo_wine ok(ret == CSTR_EQUAL, "expected CSTR_EQUAL, got %d\n", ret);
+    ok(ret == CSTR_EQUAL, "expected CSTR_EQUAL, got %d\n", ret);
     ret = CompareStringW(CP_ACP, NORM_IGNORENONSPACE, ABC_EE, 4, A_ACUTE_BC_DECOMP, 5);
-    todo_wine ok(ret == CSTR_EQUAL, "expected CSTR_EQUAL, got %d\n", ret);
+    ok(ret == CSTR_EQUAL, "expected CSTR_EQUAL, got %d\n", ret);
     ret = CompareStringW(CP_ACP, NORM_IGNORENONSPACE, A_ACUTE_BC, 4, A_ACUTE_BC_DECOMP, 5);
     ok(ret == CSTR_EQUAL, "expected CSTR_EQUAL, got %d\n", ret);
 
@@ -2059,12 +2059,12 @@ static void test_CompareStringW(void)
     ret = CompareStringW(CP_ACP, 0, A_NULL_BC, 4, A_ACUTE_BC, 4);
     ok(ret == CSTR_LESS_THAN, "expected CSTR_LESS_THAN, got %d\n", ret);
     ret = CompareStringW(CP_ACP, NORM_IGNORENONSPACE, A_NULL_BC, 4, A_ACUTE_BC, 4);
-    todo_wine ok(ret == CSTR_EQUAL, "expected CSTR_EQUAL, got %d\n", ret);
+    ok(ret == CSTR_EQUAL, "expected CSTR_EQUAL, got %d\n", ret);
 
     ret = CompareStringW(CP_ACP, 0, A_NULL_BC, 4, A_ACUTE_BC_DECOMP, 5);
     ok(ret == CSTR_LESS_THAN, "expected CSTR_LESS_THAN, got %d\n", ret);
     ret = CompareStringW(CP_ACP, NORM_IGNORENONSPACE, A_NULL_BC, 4, A_ACUTE_BC_DECOMP, 5);
-    todo_wine ok(ret == CSTR_EQUAL, "expected CSTR_EQUAL, got %d\n", ret);
+    ok(ret == CSTR_EQUAL, "expected CSTR_EQUAL, got %d\n", ret);
 }
 
 struct comparestringex_test {
@@ -2101,7 +2101,7 @@ static const struct comparestringex_test comparestringex_tests[] = {
     },
     { /* 5 */
       "tr-TR", 0,
-      {0x130,0}, {0x131,0}, CSTR_GREATER_THAN, -1,                TRUE
+      {0x130,0}, {0x131,0}, CSTR_GREATER_THAN, -1,                FALSE
     },
     /* with NORM_IGNORECASE */
     { /* 6 */
@@ -2126,7 +2126,7 @@ static const struct comparestringex_test comparestringex_tests[] = {
     },
     { /* 11 */
       "tr-TR", NORM_IGNORECASE,
-      {0x130,0}, {0x131,0}, CSTR_GREATER_THAN, -1,                TRUE
+      {0x130,0}, {0x131,0}, CSTR_GREATER_THAN, -1,                FALSE
     },
     /* with NORM_LINGUISTIC_CASING */
     { /* 12 */
@@ -2151,7 +2151,7 @@ static const struct comparestringex_test comparestringex_tests[] = {
     },
     { /* 17 */
       "tr-TR", NORM_LINGUISTIC_CASING,
-      {0x130,0}, {0x131,0}, CSTR_GREATER_THAN, -1,                TRUE
+      {0x130,0}, {0x131,0}, CSTR_GREATER_THAN, -1,                FALSE
     },
     /* with LINGUISTIC_IGNORECASE */
     { /* 18 */
@@ -2176,7 +2176,7 @@ static const struct comparestringex_test comparestringex_tests[] = {
     },
     { /* 23 */
       "tr-TR", LINGUISTIC_IGNORECASE,
-      {0x130,0}, {0x131,0}, CSTR_GREATER_THAN, -1,                TRUE
+      {0x130,0}, {0x131,0}, CSTR_GREATER_THAN, -1,                FALSE
     },
     /* with NORM_LINGUISTIC_CASING | NORM_IGNORECASE */
     { /* 24 */
@@ -2201,7 +2201,7 @@ static const struct comparestringex_test comparestringex_tests[] = {
     },
     { /* 29 */
       "tr-TR", NORM_LINGUISTIC_CASING | NORM_IGNORECASE,
-      {0x130,0}, {0x131,0}, CSTR_GREATER_THAN, -1,                TRUE
+      {0x130,0}, {0x131,0}, CSTR_GREATER_THAN, -1,                FALSE
     },
     /* with NORM_LINGUISTIC_CASING | LINGUISTIC_IGNORECASE */
     { /* 30 */
@@ -2226,7 +2226,7 @@ static const struct comparestringex_test comparestringex_tests[] = {
     },
     { /* 35 */
       "tr-TR", NORM_LINGUISTIC_CASING | LINGUISTIC_IGNORECASE,
-      {0x130,0}, {0x131,0}, CSTR_GREATER_THAN, CSTR_LESS_THAN,    TRUE
+      {0x130,0}, {0x131,0}, CSTR_GREATER_THAN, CSTR_LESS_THAN,    FALSE
     }
 };
 
@@ -3380,6 +3380,9 @@ static const struct sorting_test_entry unicode_sorting_tests[] =
     { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x00dc", L"\x1ee9" },
     { L"en-US", CSTR_LESS_THAN,    CSTR_LESS_THAN,    0, L"\x00fc", L"\x1ee6" },
     { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\x0152", L"\x00d6" },
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\xa042\x09bc", L"\xa042" }, /* Diacritic is added */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\xa063\x302b", L"\xa063" }, /* Diacritic is added */
+    { L"en-US", CSTR_GREATER_THAN, CSTR_GREATER_THAN, 0, L"\xa07e\x0c56", L"\xa07e" }, /* Diacritic is added */
 };
 
 static void test_unicode_sorting(void)
@@ -6121,7 +6124,7 @@ static void test_FindNLSStringEx(void)
         { localeW, FIND_FROMSTART, comb_s_accent1W, ARRAY_SIZE(comb_s_accent1W)-1,
           comb_s_accent2W, ARRAY_SIZE(comb_s_accent2W)-1, 0, 0, 6, 1, TRUE },
         { localeW, FIND_FROMSTART, comb_q_accent1W, ARRAY_SIZE(comb_q_accent1W)-1,
-          comb_q_accent2W, ARRAY_SIZE(comb_q_accent2W)-1, 0, 0, 7, 1, FALSE },
+          comb_q_accent2W, ARRAY_SIZE(comb_q_accent2W)-1, 0, 0, 7, 0, FALSE },
         { 0 }
     };
     struct test_data *ptest;
@@ -7275,6 +7278,6 @@ START_TEST(locale)
   test_SpecialCasing();
   test_NLSVersion();
   /* this requires collation table patch to make it MS compatible */
-  if (0) test_sorting();
+  test_sorting();
   test_unicode_sorting();
 }
