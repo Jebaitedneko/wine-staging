@@ -5388,6 +5388,7 @@ static void test_reparse_points(void)
     static const WCHAR dotW[] = {'.',0};
     REPARSE_DATA_BUFFER *buffer = NULL;
     DWORD dwret, dwLen, dwFlags, err;
+    WCHAR buf[] = {0,0,0,0};
     HANDLE handle, token;
     IO_STATUS_BLOCK iosb;
     UNICODE_STRING nameW;
@@ -5475,7 +5476,7 @@ static void test_reparse_points(void)
     memset(&old_attrib, 0x00, sizeof(old_attrib));
     old_attrib.LastAccessTime.QuadPart = 0x200deadcafebeef;
     dwret = NtSetInformationFile(handle, &iosb, &old_attrib, sizeof(old_attrib), FileBasicInformation);
-    ok(dwret == STATUS_SUCCESS, "Failed to set junction point folder's attributes (0x%x).\n", dwret);
+    todo_wine ok(dwret == STATUS_SUCCESS, "Failed to set junction point folder's attributes (0x%x).\n", dwret);
     memset(&guid_buffer, 0x00, sizeof(guid_buffer));
     guid_buffer.ReparseTag = IO_REPARSE_TAG_MOUNT_POINT;
     bret = DeviceIoControl(handle, FSCTL_DELETE_REPARSE_POINT, (LPVOID)&guid_buffer,
@@ -5484,7 +5485,7 @@ static void test_reparse_points(void)
     memset(&new_attrib, 0x00, sizeof(new_attrib));
     dwret = NtQueryInformationFile(handle, &iosb, &new_attrib, sizeof(new_attrib), FileBasicInformation);
     ok(dwret == STATUS_SUCCESS, "Failed to get junction point folder's attributes (0x%x).\n", dwret);
-    ok(old_attrib.LastAccessTime.QuadPart == new_attrib.LastAccessTime.QuadPart,
+    todo_wine ok(old_attrib.LastAccessTime.QuadPart == new_attrib.LastAccessTime.QuadPart,
        "Junction point folder's access time does not match.\n");
     CloseHandle(handle);
 
@@ -5565,6 +5566,24 @@ static void test_reparse_points(void)
     ok(bret, "Failed to create symlink! (0x%x)\n", GetLastError());
     CloseHandle(handle);
 
+    /* Check the size/data of the symlink target when opened with FILE_FLAG_OPEN_REPARSE_POINT */
+    handle = CreateFileW(target_path, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING,
+                         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0);
+    if (handle == INVALID_HANDLE_VALUE)
+    {
+        win_skip("Failed to open symlink file handle (0x%x).\n", GetLastError());
+        goto cleanup;
+    }
+    ok(GetFileSize(handle, NULL) == sizeof(fooW), "symlink target size does not match (%d != %d)\n",
+       GetFileSize(handle, NULL), sizeof(fooW));
+    bret = ReadFile(handle, &buf, sizeof(buf), &dwLen, NULL);
+    ok(bret, "Failed to read data from the symlink target.\n");
+    ok(dwLen == sizeof(fooW), "Length of symlink target data does not match (%d != %d).\n",
+       dwLen, sizeof(fooW));
+    ok(!memcmp(fooW, &buf, sizeof(fooW)), "Symlink target data does not match (%s != %s).\n",
+       wine_dbgstr_wn(buf, dwLen), wine_dbgstr_w(fooW));
+    CloseHandle(handle);
+
     /* Check deleting a file symlink as if it were a directory */
     bret = RemoveDirectoryW(reparse_path);
     todo_wine ok(!bret, "Succeeded in deleting file symlink as a directory!\n");
@@ -5628,7 +5647,7 @@ static void test_reparse_points(void)
     memset(&old_attrib, 0x00, sizeof(old_attrib));
     old_attrib.LastAccessTime.QuadPart = 0x200deadcafebeef;
     dwret = NtSetInformationFile(handle, &iosb, &old_attrib, sizeof(old_attrib), FileBasicInformation);
-    ok(dwret == STATUS_SUCCESS, "Failed to set symlink folder's attributes (0x%x).\n", dwret);
+    todo_wine ok(dwret == STATUS_SUCCESS, "Failed to set symlink folder's attributes (0x%x).\n", dwret);
     memset(&guid_buffer, 0x00, sizeof(guid_buffer));
     guid_buffer.ReparseTag = IO_REPARSE_TAG_SYMLINK;
     bret = DeviceIoControl(handle, FSCTL_DELETE_REPARSE_POINT, (LPVOID)&guid_buffer,
@@ -5637,7 +5656,7 @@ static void test_reparse_points(void)
     memset(&new_attrib, 0x00, sizeof(new_attrib));
     dwret = NtQueryInformationFile(handle, &iosb, &new_attrib, sizeof(new_attrib), FileBasicInformation);
     ok(dwret == STATUS_SUCCESS, "Failed to get symlink folder's attributes (0x%x).\n", dwret);
-    ok(old_attrib.LastAccessTime.QuadPart == new_attrib.LastAccessTime.QuadPart,
+    todo_wine ok(old_attrib.LastAccessTime.QuadPart == new_attrib.LastAccessTime.QuadPart,
        "Symlink folder's access time does not match.\n");
     CloseHandle(handle);
 

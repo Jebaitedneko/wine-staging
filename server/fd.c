@@ -101,6 +101,10 @@
 #include "winioctl.h"
 #include "ddk/wdm.h"
 
+#if !defined(O_SYMLINK) && defined(O_PATH)
+# define O_SYMLINK (O_NOFOLLOW | O_PATH)
+#endif
+
 #if defined(HAVE_SYS_EPOLL_H) && defined(HAVE_EPOLL_CREATE)
 # include <sys/epoll.h>
 # define USE_EPOLL
@@ -1902,6 +1906,14 @@ void get_nt_name( struct fd *fd, struct unicode_str *name )
     name->len = fd->nt_namelen;
 }
 
+int check_symlink( char *name )
+{
+    struct stat st;
+
+    lstat( name, &st );
+    return S_ISLNK( st.st_mode );
+}
+
 /* open() wrapper that returns a struct fd with no fd user set */
 struct fd *open_fd( struct fd *root, const char *name, struct unicode_str nt_name,
                     int flags, mode_t *mode, unsigned int access,
@@ -1962,6 +1974,18 @@ struct fd *open_fd( struct fd *root, const char *name, struct unicode_str nt_nam
     }
     else rw_mode = O_RDONLY;
 
+    fd->unix_name = NULL;
+    if ((path = dup_fd_name( root, name )))
+    {
+        int is_symlink = check_symlink( path );
+#if defined(O_SYMLINK)
+        if (is_symlink && (options & FILE_OPEN_REPARSE_POINT) && !(flags & O_CREAT))
+            flags |= O_SYMLINK;
+#endif
+        fd->unlink_name = path;
+        fd->unix_name = realpath( path, NULL );
+    }
+
     if ((fd->unix_fd = open( name, rw_mode | (flags & ~O_TRUNC), *mode )) == -1)
     {
         /* if we tried to open a directory for write access, retry read-only */
@@ -1979,12 +2003,6 @@ struct fd *open_fd( struct fd *root, const char *name, struct unicode_str nt_nam
     }
 
     fd->nt_name = dup_nt_name( root, nt_name, &fd->nt_namelen );
-    fd->unix_name = NULL;
-    if ((path = dup_fd_name( root, name )))
-    {
-        fd->unlink_name = path;
-        fd->unix_name = realpath( path, NULL );
-    }
 
     closed_fd->unix_fd = fd->unix_fd;
     closed_fd->unlink = 0;
@@ -2453,6 +2471,7 @@ static struct fd *get_handle_fd_obj( struct process *process, obj_handle_t handl
 
 static int is_dir_empty( int fd )
 {
+    int dir_fd;
     DIR *dir;
     int empty;
     struct dirent *de;
@@ -2460,8 +2479,13 @@ static int is_dir_empty( int fd )
     if ((fd = dup( fd )) == -1)
         return -1;
 
-    if (!(dir = fdopendir( fd )))
+    /* use openat() so that if 'fd' was opened with O_SYMLINK we can still check the contents */
+    dir_fd = openat( fd, ".", O_RDONLY | O_DIRECTORY | O_NONBLOCK );
+    if (dir_fd == -1)
+        return -1;
+    if (!(dir = fdopendir( dir_fd )))
     {
+        close( dir_fd );
         close( fd );
         return -1;
     }
@@ -2473,6 +2497,7 @@ static int is_dir_empty( int fd )
         empty = 0;
     }
     closedir( dir );
+    close( dir_fd );
     return empty;
 }
 
