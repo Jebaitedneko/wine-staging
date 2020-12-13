@@ -5351,8 +5351,8 @@ static INT build_reparse_buffer(const WCHAR *filename, REPARSE_DATA_BUFFER **pbu
 
 static void test_reparse_points(void)
 {
+    WCHAR path[MAX_PATH], reparse_path[MAX_PATH], target_path[MAX_PATH], volnameW[MAX_PATH];
     static const WCHAR reparseW[] = {'\\','r','e','p','a','r','s','e',0};
-    WCHAR path[MAX_PATH], reparse_path[MAX_PATH], target_path[MAX_PATH];
     static const WCHAR targetW[] = {'\\','t','a','r','g','e','t',0};
     INT buffer_len, string_len, path_len, total_len;
     FILE_BASIC_INFORMATION old_attrib, new_attrib;
@@ -5381,7 +5381,12 @@ static void test_reparse_points(void)
     pRtlDosPathNameToNtPathName_U(path, &nameW, NULL, NULL);
     volW[0] = nameW.Buffer[4];
     pRtlFreeUnicodeString( &nameW );
-    GetVolumeInformationW(volW, 0, 0, 0, &dwLen, &dwFlags, 0, 0);
+    if (!GetVolumeNameForVolumeMountPointW(volW, volnameW, MAX_PATH))
+    {
+        win_skip("Failed to obtain volume name for current volume.\n");
+        return;
+    }
+    GetVolumeInformationW(volnameW, 0, 0, 0, &dwLen, &dwFlags, 0, 0);
     if (!(dwFlags & FILE_SUPPORTS_REPARSE_POINTS))
     {
         skip("File system does not support reparse points.\n");
