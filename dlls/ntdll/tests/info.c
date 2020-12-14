@@ -2347,7 +2347,7 @@ static void test_queryvirtualmemory(void)
     memset(msn, 0x55, sizeof(*msn));
     memset(buffer_name, 0x77, sizeof(buffer_name));
     readcount = 0;
-    status = pNtQueryVirtualMemory(NtCurrentProcess(), module, MemorySectionName, msn, sizeof(buffer_name), &readcount);
+    status = pNtQueryVirtualMemory(NtCurrentProcess(), (char *)module + 0x100, MemorySectionName, msn, sizeof(buffer_name), &readcount);
     ok( status == STATUS_SUCCESS, "Expected STATUS_SUCCESS, got %08x\n", status);
     ok( readcount > 0, "Expected readcount to be > 0\n");
     pRtlDowncaseUnicodeString( &msn->SectionFileName, &msn->SectionFileName, FALSE );

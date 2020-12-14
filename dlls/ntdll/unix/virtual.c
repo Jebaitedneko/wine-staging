@@ -4031,6 +4031,36 @@ static NTSTATUS get_working_set_ex( HANDLE process, LPCVOID addr,
     return STATUS_SUCCESS;
 }
 
+static char *replace_wine_dir_with_system_dir( char *name )
+{
+    static const char system32_dir_suffix[] = "drive_c/Windows/System32";
+    static const char syswow64_dir_suffix[] = "drive_c/Windows/SysWOW64";
+    unsigned int i, sysdir_length, dll_path_length, size;
+    const char *system_dir;
+    char *new_name;
+
+    for (i = 0; dll_paths[i]; ++i)
+    {
+        dll_path_length = strlen( dll_paths[i] );
+        if (!strncmp( name, dll_paths[i], dll_path_length))
+        {
+            system_dir = is_wow64 ? syswow64_dir_suffix : system32_dir_suffix;
+            sysdir_length = strlen( config_dir ) + 1 + strlen( system_dir );
+            size = strlen( name ) - dll_path_length + sysdir_length + 1;
+            if (!(new_name = malloc( size )))
+            {
+                ERR("No memory.\n");
+                return name;
+            }
+            sprintf( new_name, "%s/%s", config_dir, system_dir );
+            strcat( new_name, name + dll_path_length );
+            free( name );
+            return new_name;
+        }
+    }
+    return name;
+}
+
 /* get file name for mapped section */
 static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
                                   MEMORY_SECTION_NAME *info,
@@ -4066,6 +4096,7 @@ static NTSTATUS get_section_name( HANDLE process, LPCVOID addr,
         NtClose( mapping );
         if (!status)
         {
+            unix_name = replace_wine_dir_with_system_dir( unix_name );
             status = unix_to_nt_file_name( unix_name, &nt_nameW );
             free( unix_name );
         }
