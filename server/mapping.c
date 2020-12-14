@@ -1146,7 +1146,7 @@ DECL_HANDLER(get_mapping_file)
     struct process *process;
     struct file *file;
 
-    if (!(process = get_process_from_handle( req->process, 0 ))) return;
+    if (!(process = get_process_from_handle( req->process, PROCESS_QUERY_INFORMATION ))) return;
 
     LIST_FOR_EACH_ENTRY( view, &process->views, struct memory_view, entry )
         if (req->addr >= view->base && req->addr < view->base + view->size) break;
