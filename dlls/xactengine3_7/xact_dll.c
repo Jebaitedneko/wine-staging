@@ -883,6 +883,42 @@ static HRESULT WINAPI IXACT3EngineImpl_CreateSoundBank(IXACT3Engine *iface,
     return S_OK;
 }
 
+struct thread_data
+{
+    XACT3EngineImpl *engine;
+    XACT_NOTIFICATION note;
+};
+
+static DWORD WINAPI thread_notications(LPVOID data)
+{
+    struct thread_data *tdata = data;
+
+    Sleep(1000);
+
+    FIXME("Callback XACTNOTIFICATIONTYPE_WAVEBANKPREPARED (%p)\n", tdata->engine);
+
+    tdata->engine->notification_callback(&tdata->note);
+
+    CoTaskMemFree(data);
+    return 0;
+}
+
+static void send_wavebank_notification(XACT3EngineImpl *This, IXACT3WaveBank *wavebank)
+{
+    if (This->notification_callback)
+    {
+        HANDLE thread;
+        struct thread_data *tdata = CoTaskMemAlloc(sizeof(struct thread_data));
+
+        tdata->engine = This;
+        tdata->note.type = XACTNOTIFICATIONTYPE_WAVEBANKPREPARED;
+        tdata->note.u.wave.pWaveBank = wavebank;
+
+        thread = CreateThread(NULL, 0, thread_notications, tdata, 0, NULL);
+        CloseHandle(thread);
+    }
+}
+
 static HRESULT WINAPI IXACT3EngineImpl_CreateInMemoryWaveBank(IXACT3Engine *iface,
         const void* pvBuffer, DWORD dwSize, DWORD dwFlags,
         DWORD dwAllocAttributes, IXACT3WaveBank **ppWaveBank)
@@ -914,6 +950,8 @@ static HRESULT WINAPI IXACT3EngineImpl_CreateInMemoryWaveBank(IXACT3Engine *ifac
     wb->IXACT3WaveBank_iface.lpVtbl = &XACT3WaveBank_Vtbl;
     wb->fact_wavebank = fwb;
     *ppWaveBank = &wb->IXACT3WaveBank_iface;
+
+    send_wavebank_notification(This, &wb->IXACT3WaveBank_iface);
 
     TRACE("Created in-memory WaveBank: %p\n", wb);
 
@@ -962,6 +1000,8 @@ static HRESULT WINAPI IXACT3EngineImpl_CreateStreamingWaveBank(IXACT3Engine *ifa
     wb->IXACT3WaveBank_iface.lpVtbl = &XACT3WaveBank_Vtbl;
     wb->fact_wavebank = fwb;
     *ppWaveBank = &wb->IXACT3WaveBank_iface;
+
+    send_wavebank_notification(This, &wb->IXACT3WaveBank_iface);
 
     TRACE("Created streaming WaveBank: %p\n", wb);
 
