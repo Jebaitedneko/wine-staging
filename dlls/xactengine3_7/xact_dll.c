@@ -637,6 +637,8 @@ typedef struct _XACT3EngineImpl {
     XACT_READFILE_CALLBACK pReadFile;
     XACT_GETOVERLAPPEDRESULT_CALLBACK pGetOverlappedResult;
     XACT_NOTIFICATION_CALLBACK notification_callback;
+
+    void *contexts[17];
 } XACT3EngineImpl;
 
 typedef struct wrap_readfile_struct {
@@ -912,6 +914,7 @@ static void send_wavebank_notification(XACT3EngineImpl *This, IXACT3WaveBank *wa
 
         tdata->engine = This;
         tdata->note.type = XACTNOTIFICATIONTYPE_WAVEBANKPREPARED;
+        tdata->note.pvContext = This->contexts[XACTNOTIFICATIONTYPE_WAVEBANKPREPARED - 1];
         tdata->note.u.wave.pWaveBank = wavebank;
 
         thread = CreateThread(NULL, 0, thread_notications, tdata, 0, NULL);
@@ -1158,9 +1161,11 @@ static HRESULT WINAPI IXACT3EngineImpl_RegisterNotification(IXACT3Engine *iface,
     XACT3EngineImpl *This = impl_from_IXACT3Engine(iface);
     FACTNotificationDescription fdesc;
 
-    TRACE("(%p)->(%p)\n", This, pNotificationDesc);
+    TRACE("(%p)->(%p, pvContext %p)\n", This, pNotificationDesc, pNotificationDesc->pvContext);
 
     unwrap_notificationdesc(&fdesc, pNotificationDesc);
+
+    This->contexts[pNotificationDesc->type - 1] = pNotificationDesc->pvContext;
     fdesc.pvContext = This;
     return FACTAudioEngine_RegisterNotification(This->fact_engine, &fdesc);
 }
@@ -1174,6 +1179,8 @@ static HRESULT WINAPI IXACT3EngineImpl_UnRegisterNotification(IXACT3Engine *ifac
     TRACE("(%p)->(%p)\n", This, pNotificationDesc);
 
     unwrap_notificationdesc(&fdesc, pNotificationDesc);
+
+    This->contexts[pNotificationDesc->type - 1] = pNotificationDesc->pvContext;
     fdesc.pvContext = This;
     return FACTAudioEngine_UnRegisterNotification(This->fact_engine, &fdesc);
 }
