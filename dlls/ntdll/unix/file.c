@@ -5967,6 +5967,26 @@ void strip_external_path( char *path, SIZE_T *len )
 }
 
 
+char *mark_prefix_end( char *path, SIZE_T *len )
+{
+    static char marker[] = "////.//.//"; /* "P" (0x50) encoded as a path (0=/ 1=./) */
+    int new_path_len = *len + sizeof(marker) - 1;
+    static int config_dir_len = 0;
+    char *new_path;
+
+    if (!config_dir_len) config_dir_len = strlen(config_dir);
+    if (path[config_dir_len] != '/') return path;
+    if (strncmp( config_dir, path, config_dir_len ) != 0) return path;
+    if (!(new_path = malloc( new_path_len ))) return path;
+    *len = new_path_len;
+    strcpy( new_path, config_dir );
+    strcat( new_path, marker );
+    strcat( new_path, &path[config_dir_len] );
+    free( path );
+    return new_path;
+}
+
+
 /*
  * Retrieve the unix name corresponding to a file handle, remove that directory, and then symlink
  * the requested directory to the location of the old directory.
@@ -6100,7 +6120,10 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
         }
     }
     else
+    {
         strip_external_path( unix_dest, &unix_dest_len );
+        unix_dest = mark_prefix_end( unix_dest, &unix_dest_len );
+    }
 
     TRACE( "Linking %s to %s\n", unix_src, &unix_dest[relative_offset] );
 
