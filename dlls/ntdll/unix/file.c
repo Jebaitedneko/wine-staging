@@ -5942,6 +5942,31 @@ static void ignore_server_ioctl_struct_holes( ULONG code, const void *in_buffer,
 }
 
 
+void strip_external_path( char *path, SIZE_T *len )
+{
+    static char *unix_root = NULL;
+    static int unix_root_len = 0;
+
+    if (unix_root == NULL)
+    {
+        UNICODE_STRING nameW;
+        WCHAR *nt_name;
+
+        if (unix_to_nt_file_name( "/", &nt_name ) != STATUS_SUCCESS) return;
+        nameW.Buffer = nt_name;
+        nameW.Length = wcslen(nt_name) * sizeof(WCHAR);
+        nt_to_unix_file_name( &nameW, &unix_root, NULL, FILE_OPEN );
+        free( nt_name );
+        if (unix_root == NULL) return;
+        unix_root_len = strlen(unix_root);
+    }
+
+    if (strncmp( unix_root, path, unix_root_len ) != 0) return;
+    *len -= unix_root_len;
+    memmove( path, &path[unix_root_len - 1], *len + 1 );
+}
+
+
 /*
  * Retrieve the unix name corresponding to a file handle, remove that directory, and then symlink
  * the requested directory to the location of the old directory.
@@ -6074,6 +6099,8 @@ NTSTATUS FILE_CreateSymlink(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
             goto cleanup;
         }
     }
+    else
+        strip_external_path( unix_dest, &unix_dest_len );
 
     TRACE( "Linking %s to %s\n", unix_src, &unix_dest[relative_offset] );
 
