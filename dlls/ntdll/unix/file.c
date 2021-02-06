@@ -6241,9 +6241,10 @@ cleanup:
 NTSTATUS get_symlink_properties(int fd, const char *unix_src, char *unix_dest, int *unix_dest_len,
                                 DWORD *tag, ULONG *flags, BOOL *is_dir)
 {
+    NTSTATUS status = STATUS_SUCCESS;
     int len = MAX_PATH;
+    int decoded = FALSE;
     DWORD reparse_tag;
-    NTSTATUS status;
     BOOL dir_flag;
     char *p, *tmp;
     ssize_t ret;
@@ -6270,10 +6271,7 @@ NTSTATUS get_symlink_properties(int fd, const char *unix_src, char *unix_dest, i
         p++;
     }
     if (*p++ != '/')
-    {
-        status = STATUS_NOT_IMPLEMENTED;
-        goto cleanup;
-    }
+        goto done;
     reparse_tag = 0;
     for (i = 0; i < sizeof(ULONG)*8; i++)
     {
@@ -6285,10 +6283,7 @@ NTSTATUS get_symlink_properties(int fd, const char *unix_src, char *unix_dest, i
         else if (c == '.' && *p++ == '/')
             val = 1;
         else
-        {
-            status = STATUS_NOT_IMPLEMENTED;
-            goto cleanup;
-        }
+            goto done;
         reparse_tag |= (val << i);
     }
     /* skip past the directory/file flag */
@@ -6301,19 +6296,31 @@ NTSTATUS get_symlink_properties(int fd, const char *unix_src, char *unix_dest, i
         else if (c == '.' && *p++ == '/')
             dir_flag = TRUE;
         else
-        {
-            status = STATUS_NOT_IMPLEMENTED;
-            goto cleanup;
-        }
+            goto done;
     }
     else
         dir_flag = TRUE;
+    decoded = TRUE;
+
+done:
+    if (!decoded)
+    {
+        /* treat undecoded unix symlinks as NT symlinks */
+        struct stat st;
+
+        p = tmp;
+        reparse_tag = IO_REPARSE_TAG_LX_SYMLINK;
+        if (flags && *p != '/') *flags = SYMLINK_FLAG_RELATIVE;
+        if (!fstatat( fd, unix_src, &st, 0 ))
+            dir_flag = S_ISDIR(st.st_mode);
+        else
+            dir_flag = FALSE; /* treat dangling symlinks as files */
+    }
     len -= (p - tmp);
     if (tag) *tag = reparse_tag;
     if (is_dir) *is_dir = dir_flag;
     if (unix_dest) memmove(unix_dest, p, len + 1);
     if (unix_dest_len) *unix_dest_len = len;
-    status = STATUS_SUCCESS;
 
 cleanup:
     if (!unix_dest) free( tmp );
@@ -6327,9 +6334,9 @@ cleanup:
  */
 NTSTATUS get_reparse_point(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG *size)
 {
+    VOID *subst_name = NULL, *print_name = NULL, *unix_name = NULL;
     INT prefix_len, path_len, total_len;
     char *unix_src, unix_dest[PATH_MAX];
-    VOID *subst_name, *print_name;
     SIZE_T nt_dest_len = PATH_MAX;
     int unix_dest_len = PATH_MAX;
     BOOL dest_allocated = FALSE;
@@ -6395,6 +6402,7 @@ NTSTATUS get_reparse_point(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG *si
     {
     case IO_REPARSE_TAG_MOUNT_POINT:
         max_length = out_size-FIELD_OFFSET(typeof(*buffer), MountPointReparseBuffer.PathBuffer[1]);
+        if (nt_dest_len > max_length) { status = STATUS_BUFFER_TOO_SMALL; goto cleanup; }
         path_len = 0;
         buffer->MountPointReparseBuffer.SubstituteNameOffset = path_len;
         buffer->MountPointReparseBuffer.SubstituteNameLength = nt_dest_len;
@@ -6408,6 +6416,7 @@ NTSTATUS get_reparse_point(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG *si
         break;
     case IO_REPARSE_TAG_SYMLINK:
         max_length = out_size-FIELD_OFFSET(typeof(*buffer), SymbolicLinkReparseBuffer.PathBuffer[1]);
+        if (nt_dest_len > max_length) { status = STATUS_BUFFER_TOO_SMALL; goto cleanup; }
         path_len = 0;
         buffer->SymbolicLinkReparseBuffer.SubstituteNameOffset = path_len;
         buffer->SymbolicLinkReparseBuffer.SubstituteNameLength = nt_dest_len;
@@ -6421,19 +6430,20 @@ NTSTATUS get_reparse_point(HANDLE handle, REPARSE_DATA_BUFFER *buffer, ULONG *si
         buffer->SymbolicLinkReparseBuffer.Flags = flags;
         break;
     default:
-        /* unrecognized (regular) files should probably be treated as symlinks */
-        WARN("unrecognized symbolic link\n");
-        status = STATUS_NOT_IMPLEMENTED;
-        goto cleanup;
-    }
-    if (nt_dest_len > max_length)
-    {
-        status = STATUS_BUFFER_TOO_SMALL;
-        goto cleanup;
+        WARN("unrecognized symbolic link reparse tag: 0x%08x\n", buffer->ReparseTag);
+    case IO_REPARSE_TAG_LX_SYMLINK:
+        /* report links without a reparse tag as a WSL linux/unix symlink */
+        max_length = out_size-FIELD_OFFSET(typeof(*buffer), LinuxSymbolicLinkReparseBuffer.PathBuffer[0]);
+        if (unix_dest_len > max_length) { status = STATUS_BUFFER_TOO_SMALL; goto cleanup; }
+        buffer->LinuxSymbolicLinkReparseBuffer.Version = 2;
+        unix_name = &buffer->LinuxSymbolicLinkReparseBuffer.PathBuffer[0];
+        total_len = FIELD_OFFSET(typeof(*buffer), LinuxSymbolicLinkReparseBuffer.PathBuffer[unix_dest_len]);
+        break;
     }
 
-    memcpy( subst_name, nt_dest, nt_dest_len );
-    memcpy( print_name, &nt_dest[prefix_len], nt_dest_len - prefix_len*sizeof(WCHAR) );
+    if (subst_name) memcpy( subst_name, nt_dest, nt_dest_len );
+    if (print_name) memcpy( print_name, &nt_dest[prefix_len], nt_dest_len - prefix_len*sizeof(WCHAR) );
+    if (unix_name) memcpy( unix_name, unix_dest, unix_dest_len );
     *size = total_len;
     buffer->ReparseDataLength = total_len - FIELD_OFFSET(typeof(*buffer), GenericReparseBuffer);
     status = STATUS_SUCCESS;
