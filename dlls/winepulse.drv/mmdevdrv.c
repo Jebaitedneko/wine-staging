@@ -68,8 +68,8 @@ enum DriverPriority {
     Priority_Preferred
 };
 
-static const REFERENCE_TIME MinimumPeriod = 30000;
-static const REFERENCE_TIME DefaultPeriod = 100000;
+static REFERENCE_TIME MinimumPeriod = 30000;
+static REFERENCE_TIME DefaultPeriod = 100000;
 
 static pa_context *pulse_ctx;
 static pa_mainloop *pulse_ml;
@@ -465,6 +465,9 @@ static void pulse_probe_settings(int render, WAVEFORMATEXTENSIBLE *fmt) {
     pa_buffer_attr attr;
     int ret;
     unsigned int length = 0;
+    const char *env_usecs = getenv("STAGING_AUDIO_USECS");
+    const char *env_minp = getenv("STAGING_AUDIO_MINP");
+    const char *env_defp = getenv("STAGING_AUDIO_DEFP");
 
     pa_channel_map_init_auto(&map, 2, PA_CHANNEL_MAP_ALSA);
     ss.rate = 48000;
@@ -472,9 +475,14 @@ static void pulse_probe_settings(int render, WAVEFORMATEXTENSIBLE *fmt) {
     ss.channels = map.channels;
 
     attr.maxlength = -1;
-    attr.tlength = -1;
-    attr.minreq = attr.fragsize = pa_frame_size(&ss);
-    attr.prebuf = 0;
+    attr.tlength = attr.fragsize = pa_usec_to_bytes(1000, &ss);
+    if(env_usecs) {
+        int val = atoi(env_usecs);
+        attr.tlength = attr.fragsize = pa_usec_to_bytes(val, &ss);
+        printf("%s:%d :: Using %d usecs for attr.tlength and attr.fragsize (STAGING_AUDIO_USECS).\n", __func__, __LINE__, val);
+    }
+    attr.minreq = -1;
+    attr.prebuf = -1;
 
     stream = pa_stream_new(pulse_ctx, "format test stream", &ss, &map);
     if (stream)
@@ -483,9 +491,9 @@ static void pulse_probe_settings(int render, WAVEFORMATEXTENSIBLE *fmt) {
         ret = -1;
     else if (render)
         ret = pa_stream_connect_playback(stream, NULL, &attr,
-        PA_STREAM_START_CORKED|PA_STREAM_FIX_RATE|PA_STREAM_FIX_CHANNELS|PA_STREAM_EARLY_REQUESTS, NULL, NULL);
+        PA_STREAM_START_CORKED|PA_STREAM_FIX_RATE|PA_STREAM_FIX_CHANNELS|PA_STREAM_EARLY_REQUESTS|PA_STREAM_ADJUST_LATENCY, NULL, NULL);
     else
-        ret = pa_stream_connect_record(stream, NULL, &attr, PA_STREAM_START_CORKED|PA_STREAM_FIX_RATE|PA_STREAM_FIX_CHANNELS|PA_STREAM_EARLY_REQUESTS);
+        ret = pa_stream_connect_record(stream, NULL, &attr, PA_STREAM_START_CORKED|PA_STREAM_FIX_RATE|PA_STREAM_FIX_CHANNELS|PA_STREAM_EARLY_REQUESTS|PA_STREAM_ADJUST_LATENCY);
     if (ret >= 0) {
         while (pa_mainloop_iterate(pulse_ml, 1, &ret) >= 0 &&
                 pa_stream_get_state(stream) == PA_STREAM_CREATING)
@@ -515,6 +523,20 @@ static void pulse_probe_settings(int render, WAVEFORMATEXTENSIBLE *fmt) {
 
     if (pulse_def_period[!render] < DefaultPeriod)
         pulse_def_period[!render] = DefaultPeriod;
+
+    if(env_minp) {
+        int val = atoi(env_minp);
+        MinimumPeriod = val;
+        pulse_min_period[!render] = MinimumPeriod;
+        printf("%s:%d :: Set MinimumPeriod and pulse_min_period to %d (STAGING_AUDIO_MINP).\n", __func__, __LINE__, val);
+    }
+
+    if(env_defp) {
+        int val = atoi(env_defp);
+        DefaultPeriod = val;
+        pulse_def_period[!render] = DefaultPeriod;
+        printf("%s:%d :: Set DefaultPeriod and pulse_def_period to %d (STAGING_AUDIO_DEFP).\n", __func__, __LINE__, val);
+    }
 
     wfx->wFormatTag = WAVE_FORMAT_EXTENSIBLE;
     wfx->cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
@@ -1574,6 +1596,8 @@ static HRESULT WINAPI AudioClient_Initialize(IAudioClient3 *iface,
     ACImpl *This = impl_from_IAudioClient3(iface);
     HRESULT hr = S_OK;
     UINT period_bytes;
+    const char *env_duration = getenv("STAGING_AUDIO_DURATION");
+    const char *env_period = getenv("STAGING_AUDIO_PERIOD");
 
     TRACE("(%p)->(%x, %x, %s, %s, %p, %s)\n", This, mode, flags,
           wine_dbgstr_longlong(duration), wine_dbgstr_longlong(period), fmt, debugstr_guid(sessionguid));
@@ -1641,6 +1665,18 @@ static HRESULT WINAPI AudioClient_Initialize(IAudioClient3 *iface,
         if (duration <= 2 * period)
             period /= 2;
     }
+
+    if(env_duration) {
+        int val = atoi(env_duration);
+        duration = val;
+        printf("%s:%d :: Set duration to %d (STAGING_AUDIO_DURATION).\n", __func__, __LINE__, val);
+    }
+    if(env_period) {
+        int val = atoi(env_period);
+        period = val;
+        printf("%s:%d :: Set period to %d (STAGING_AUDIO_PERIOD).\n", __func__, __LINE__, val);
+    }
+
     period_bytes = pa_frame_size(&This->ss) * MulDiv(period, This->ss.rate, 10000000);
 
     if (duration < 20000000)
@@ -1741,6 +1777,7 @@ static HRESULT WINAPI AudioClient_GetStreamLatency(IAudioClient3 *iface,
     const pa_buffer_attr *attr;
     REFERENCE_TIME lat;
     HRESULT hr;
+    const char *env_latency = getenv("STAGING_AUDIO_LATENCY");
 
     TRACE("(%p)->(%p)\n", This, latency);
 
@@ -1760,6 +1797,13 @@ static HRESULT WINAPI AudioClient_GetStreamLatency(IAudioClient3 *iface,
     }else
         lat = attr->fragsize / pa_frame_size(&This->ss);
     *latency = 10000000;
+
+    if(env_latency) {
+        int val = atoi(env_latency);
+        *latency = val;
+        printf("%s:%d :: Set *latency to %d (STAGING_AUDIO_LATENCY).\n", __func__, __LINE__, val);
+    }
+
     *latency *= lat;
     *latency /= This->ss.rate;
     pthread_mutex_unlock(&pulse_lock);
