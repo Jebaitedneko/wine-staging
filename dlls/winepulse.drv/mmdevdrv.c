@@ -487,6 +487,7 @@ static void pulse_probe_settings(pa_mainloop *ml, pa_context *ctx, int render, W
     pa_buffer_attr attr;
     int ret;
     unsigned int length = 0;
+    const char *env_usec = getenv("STAGING_AUDIO_USEC");
     const char *env_minp = getenv("STAGING_AUDIO_MINP");
     const char *env_defp = getenv("STAGING_AUDIO_DEFP");
 
@@ -497,6 +498,11 @@ static void pulse_probe_settings(pa_mainloop *ml, pa_context *ctx, int render, W
 
     attr.maxlength = -1;
     attr.tlength = attr.fragsize = pa_usec_to_bytes(1000, &ss);
+    if(env_usec) {
+        int val = atoi(env_usec);
+        attr.tlength = attr.fragsize = pa_usec_to_bytes(val, &ss);
+        printf("%s:%d :: Using %d usecs for attr.length and attr.fragsize (STAGING_AUDIO_USEC).\n", __func__, __LINE__, val);
+    }
     attr.minreq = -1;
     attr.prebuf = -1;
 
