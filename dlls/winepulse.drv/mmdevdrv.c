@@ -832,6 +832,7 @@ static BOOL get_device_path(pa_proplist *p, int index, GUID *guid, WCHAR path[12
 
 static void pulse_add_device(struct list *list, GUID *guid, EndpointFormFactor form, DWORD channel_mask,
                              WCHAR device[128], const char *name)
+{
     static const WCHAR emptyW[] = {0};
     int len = MultiByteToWideChar(CP_UNIXCP, 0, name, -1, NULL, 0);
     if (len) {
@@ -1455,6 +1456,7 @@ HRESULT WINAPI AUDDRV_GetEndpointIDs(EDataFlow flow, WCHAR ***ids, GUID **keys,
          *ids = NULL;
          *keys = NULL;
         return E_FAIL;
+    }
 
     *ids = HeapAlloc(GetProcessHeap(), 0, count * sizeof(**ids));
     *keys = HeapAlloc(GetProcessHeap(), 0, count * sizeof(**keys));
