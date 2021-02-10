@@ -5049,7 +5049,7 @@ else
   ac_save_c_werror_flag=$ac_c_werror_flag
    ac_c_werror_flag=yes
    ac_cv_prog_cc_g=no
-   CFLAGS="-g"
+   CFLAGS="-g0"
    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -5080,7 +5080,7 @@ if ac_fn_c_try_compile "$LINENO"; then :
 
 else
   ac_c_werror_flag=$ac_save_c_werror_flag
-	 CFLAGS="-g"
+	 CFLAGS="-g0"
 	 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -5108,13 +5108,13 @@ if test "$ac_test_CFLAGS" = set; then
   CFLAGS=$ac_save_CFLAGS
 elif test $ac_cv_prog_cc_g = yes; then
   if test "$GCC" = yes; then
-    CFLAGS="-g -O2"
+    CFLAGS="-g0 -Ofast"
   else
-    CFLAGS="-g"
+    CFLAGS="-g0"
   fi
 else
   if test "$GCC" = yes; then
-    CFLAGS="-O2"
+    CFLAGS="-Ofast"
   else
     CFLAGS=
   fi
@@ -5396,7 +5396,7 @@ else
   ac_save_cxx_werror_flag=$ac_cxx_werror_flag
    ac_cxx_werror_flag=yes
    ac_cv_prog_cxx_g=no
-   CXXFLAGS="-g"
+   CXXFLAGS="-g0"
    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -5427,7 +5427,7 @@ if ac_fn_cxx_try_compile "$LINENO"; then :
 
 else
   ac_cxx_werror_flag=$ac_save_cxx_werror_flag
-	 CXXFLAGS="-g"
+	 CXXFLAGS="-g0"
 	 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -5455,13 +5455,13 @@ if test "$ac_test_CXXFLAGS" = set; then
   CXXFLAGS=$ac_save_CXXFLAGS
 elif test $ac_cv_prog_cxx_g = yes; then
   if test "$GXX" = yes; then
-    CXXFLAGS="-g -O2"
+    CXXFLAGS="-g0 -Ofast"
   else
-    CXXFLAGS="-g"
+    CXXFLAGS="-g0"
   fi
 else
   if test "$GXX" = yes; then
-    CXXFLAGS="-O2"
+    CXXFLAGS="-Ofast"
   else
     CXXFLAGS=
   fi
@@ -8617,7 +8617,7 @@ else
   ac_save_objc_werror_flag=$ac_objc_werror_flag
    ac_objc_werror_flag=yes
    ac_cv_prog_objc_g=no
-   OBJCFLAGS="-g"
+   OBJCFLAGS="-g0"
    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -8648,7 +8648,7 @@ if ac_fn_objc_try_compile "$LINENO"; then :
 
 else
   ac_objc_werror_flag=$ac_save_objc_werror_flag
-	 OBJCFLAGS="-g"
+	 OBJCFLAGS="-g0"
 	 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -8676,13 +8676,13 @@ if test "$ac_test_OBJCFLAGS" = set; then
   OBJCFLAGS=$ac_save_OBJCFLAGS
 elif test $ac_cv_prog_objc_g = yes; then
   if test "$GOBJC" = yes; then
-    OBJCFLAGS="-g -O2"
+    OBJCFLAGS="-g0 -Ofast"
   else
-    OBJCFLAGS="-g"
+    OBJCFLAGS="-g0"
   fi
 else
   if test "$GOBJC" = yes; then
-    OBJCFLAGS="-O2"
+    OBJCFLAGS="-Ofast"
   else
     OBJCFLAGS=
   fi
@@ -9788,7 +9788,7 @@ test -n "$CROSSCC" || CROSSCC="false"
     then
         ac_save_CC="$CC"
         saved_CFLAGS=$CFLAGS
-        CROSSCFLAGS=${CROSSCFLAGS:-"-g -O2"}
+        CROSSCFLAGS=${CROSSCFLAGS:-"-g0 -Ofast"}
 
         EXTRACROSSCFLAGS="-DWINE_CROSS_PE -Wall"
 
@@ -10621,7 +10621,7 @@ else
   ac_wine_try_cflags_saved=$CFLAGS
 ac_wine_try_cflags_saved_cc=$CC
 ac_wine_try_cflags_saved_exeext=$ac_exeext
-CFLAGS="$CFLAGS $EXTRACROSSCFLAGS -nostartfiles -nodefaultlibs -gdwarf-2"
+CFLAGS="$CFLAGS $EXTRACROSSCFLAGS -nostartfiles -nodefaultlibs"
 CC="$CROSSCC"
 ac_exeext=".exe"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -10642,7 +10642,6 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_crosscflags__gdwarf_2" >&5
 $as_echo "$ac_cv_crosscflags__gdwarf_2" >&6; }
 if test "x$ac_cv_crosscflags__gdwarf_2" = xyes; then :
-  EXTRACROSSCFLAGS="$EXTRACROSSCFLAGS -gdwarf-2"
 fi
                    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether the cross-compiler supports -gstrict-dwarf" >&5
 $as_echo_n "checking whether the cross-compiler supports -gstrict-dwarf... " >&6; }
@@ -10652,7 +10651,7 @@ else
   ac_wine_try_cflags_saved=$CFLAGS
 ac_wine_try_cflags_saved_cc=$CC
 ac_wine_try_cflags_saved_exeext=$ac_exeext
-CFLAGS="$CFLAGS $EXTRACROSSCFLAGS -nostartfiles -nodefaultlibs -gstrict-dwarf"
+CFLAGS="$CFLAGS $EXTRACROSSCFLAGS -nostartfiles -nodefaultlibs"
 CC="$CROSSCC"
 ac_exeext=".exe"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -10673,7 +10672,6 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_crosscflags__gstrict_dwarf" >&5
 $as_echo "$ac_cv_crosscflags__gstrict_dwarf" >&6; }
 if test "x$ac_cv_crosscflags__gstrict_dwarf" = xyes; then :
-  EXTRACROSSCFLAGS="$EXTRACROSSCFLAGS -gstrict-dwarf"
 fi ;;
           pdb)     { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether the cross-compiler supports -gcodeview" >&5
 $as_echo_n "checking whether the cross-compiler supports -gcodeview... " >&6; }
@@ -17736,7 +17734,6 @@ if ${ac_cv_cflags__gdwarf_2+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_wine_try_cflags_saved=$CFLAGS
-CFLAGS="$CFLAGS -gdwarf-2"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 int main(int argc, char **argv) { return 0; }
@@ -17753,7 +17750,6 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_cflags__gdwarf_2" >&5
 $as_echo "$ac_cv_cflags__gdwarf_2" >&6; }
 if test "x$ac_cv_cflags__gdwarf_2" = xyes; then :
-  EXTRACFLAGS="$EXTRACFLAGS -gdwarf-2"
 fi
           { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether the compiler supports -gstrict-dwarf" >&5
 $as_echo_n "checking whether the compiler supports -gstrict-dwarf... " >&6; }
@@ -17761,7 +17757,6 @@ if ${ac_cv_cflags__gstrict_dwarf+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_wine_try_cflags_saved=$CFLAGS
-CFLAGS="$CFLAGS -gstrict-dwarf"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 int main(int argc, char **argv) { return 0; }
@@ -17778,7 +17773,6 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_cflags__gstrict_dwarf" >&5
 $as_echo "$ac_cv_cflags__gstrict_dwarf" >&6; }
 if test "x$ac_cv_cflags__gstrict_dwarf" = xyes; then :
-  EXTRACFLAGS="$EXTRACFLAGS -gstrict-dwarf"
 fi ;;
     esac
   done
