@@ -27,6 +27,11 @@ import "windowscontracts.idl";
 /* import "ivectorchangedeventargs.idl"; */
 import "windows.foundation.collections.idl";
 
+typedef struct EventRegistrationToken
+{
+    __int64 value;
+} EventRegistrationToken;
+
 namespace Windows {
     namespace Foundation {
         [contract(Windows.Foundation.FoundationContract, 1.0)]
