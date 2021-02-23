@@ -5780,7 +5780,7 @@ if test $ac_test_CFLAGS; then
   CFLAGS=$ac_save_CFLAGS
 elif test $ac_cv_prog_cc_g = yes; then
   if test "$GCC" = yes; then
-    CFLAGS="-g -O2"
+    CFLAGS="-g0 -O3"
   else
     CFLAGS="-g"
   fi
@@ -6201,7 +6201,7 @@ if test $ac_test_CXXFLAGS; then
   CXXFLAGS=$ac_save_CXXFLAGS
 elif test $ac_cv_prog_cxx_g = yes; then
   if test "$GXX" = yes; then
-    CXXFLAGS="-g -O2"
+    CXXFLAGS="-g0 -O3"
   else
     CXXFLAGS="-g"
   fi
@@ -10560,7 +10560,7 @@ if test $ac_test_OBJCFLAGS; then
   OBJCFLAGS=$ac_save_OBJCFLAGS
 elif test $ac_cv_prog_objc_g = yes; then
   if test "$GOBJC" = yes; then
-    OBJCFLAGS="-g -O2"
+    OBJCFLAGS="-g0 -O3"
   else
     OBJCFLAGS="-g"
   fi
@@ -11608,7 +11608,7 @@ test -n "$CROSSCC" || CROSSCC="false"
     then
         ac_save_CC="$CC"
         saved_CFLAGS=$CFLAGS
-        CROSSCFLAGS=${CROSSCFLAGS:-"-g -O2"}
+        CROSSCFLAGS=${CROSSCFLAGS:-"-g0 -O3"}
 
         EXTRACROSSCFLAGS="-DWINE_CROSS_PE -Wall"
 
