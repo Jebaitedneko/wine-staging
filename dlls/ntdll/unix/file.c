@@ -6024,18 +6024,18 @@ NTSTATUS create_reparse_point(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
 {
     BOOL src_allocated = FALSE, path_allocated = FALSE, dest_allocated = FALSE;
     BOOL nt_dest_allocated = FALSE, tempdir_created = FALSE;
-    char *unix_src, *unix_dest, *unix_path = NULL;
+    char *unix_src, *unix_dest = NULL, *unix_path = NULL;
     char tmpdir[PATH_MAX], tmplink[PATH_MAX], *d;
     SIZE_T unix_dest_len = PATH_MAX;
     char magic_dest[PATH_MAX];
     int dest_fd, needs_close;
+    int dest_len = 0, offset;
     int relative_offset = 0;
     UNICODE_STRING nt_dest;
-    int dest_len, offset;
     BOOL is_dir = TRUE;
+    WCHAR *dest = NULL;
     NTSTATUS status;
     struct stat st;
-    WCHAR *dest;
     ULONG flags;
     int i;
 
@@ -6053,6 +6053,12 @@ NTSTATUS create_reparse_point(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
         dest = &buffer->SymbolicLinkReparseBuffer.PathBuffer[offset];
         flags = buffer->SymbolicLinkReparseBuffer.Flags;
         break;
+    case IO_REPARSE_TAG_LX_SYMLINK:
+        offset = 0;
+        flags = 0;
+        unix_dest_len = buffer->ReparseDataLength - sizeof(ULONG);
+        unix_dest = (char *) &buffer->LinuxSymbolicLinkReparseBuffer.PathBuffer[offset];
+        break;
     default:
         FIXME("stub: FSCTL_SET_REPARSE_POINT(%x)\n", buffer->ReparseTag);
         return STATUS_NOT_IMPLEMENTED;
@@ -6064,6 +6070,9 @@ NTSTATUS create_reparse_point(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
     if ((status = server_get_unix_name( handle, &unix_src, FALSE )))
         goto cleanup;
     src_allocated = TRUE;
+
+    if (unix_dest) goto have_dest;
+
     if (flags == SYMLINK_FLAG_RELATIVE)
     {
         ULONG nt_path_len = PATH_MAX, unix_path_len = PATH_MAX;
@@ -6139,6 +6148,8 @@ NTSTATUS create_reparse_point(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
     if (status != STATUS_SUCCESS && status != STATUS_NO_SUCH_FILE)
         goto cleanup;
     dest_allocated = TRUE;
+
+have_dest:
     /* check that the source and destination paths are the same up to the relative path */
     if (flags == SYMLINK_FLAG_RELATIVE)
     {
@@ -6154,14 +6165,17 @@ NTSTATUS create_reparse_point(HANDLE handle, REPARSE_DATA_BUFFER *buffer)
 
     /* Encode the reparse tag into the symlink */
     strcpy( magic_dest, "" );
-    if (flags == SYMLINK_FLAG_RELATIVE)
-        strcat( magic_dest, "." );
-    strcat( magic_dest, "/" );
-    for (i = 0; i < sizeof(ULONG)*8; i++)
+    if (buffer->ReparseTag != IO_REPARSE_TAG_LX_SYMLINK)
     {
-        if ((buffer->ReparseTag >> i) & 1)
+        if (flags == SYMLINK_FLAG_RELATIVE)
             strcat( magic_dest, "." );
         strcat( magic_dest, "/" );
+        for (i = 0; i < sizeof(ULONG)*8; i++)
+        {
+            if ((buffer->ReparseTag >> i) & 1)
+                strcat( magic_dest, "." );
+            strcat( magic_dest, "/" );
+        }
     }
     /* Encode the type (file or directory) if NT symlink */
     if (buffer->ReparseTag == IO_REPARSE_TAG_SYMLINK)

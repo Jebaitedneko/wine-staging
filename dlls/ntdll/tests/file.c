@@ -5390,7 +5390,9 @@ static void test_reparse_points(void)
     REPARSE_DATA_BUFFER *buffer = NULL;
     DWORD dwret, dwLen, dwFlags, err;
     WIN32_FILE_ATTRIBUTE_DATA fad;
+    UCHAR *unix_dest;
     WCHAR buf[] = {0,0,0,0};
+    char name[] = "target";
     HANDLE handle, token;
     IO_STATUS_BLOCK iosb;
     UNICODE_STRING nameW;
@@ -5734,6 +5736,47 @@ static void test_reparse_points(void)
     dest = &buffer->SymbolicLinkReparseBuffer.PathBuffer[buffer->SymbolicLinkReparseBuffer.SubstituteNameOffset/sizeof(WCHAR)];
     ok((memcmp(dest, &targetW[1], string_len) == 0), "Symlink destination does not match ('%s' != '%s')!\n",
                                                      wine_dbgstr_w(dest), wine_dbgstr_w(&targetW[1]));
+    CloseHandle(handle);
+
+    /* Create a Unix/Linux symlink */
+    HeapFree(GetProcessHeap(), 0, buffer);
+    RemoveDirectoryW(reparse_path);
+    bret = CreateDirectoryW(reparse_path, NULL);
+    handle = CreateFileW(reparse_path, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING,
+                         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0);
+    if (handle == INVALID_HANDLE_VALUE)
+    {
+        win_skip("Failed to open symlink directory handle (0x%x).\n", GetLastError());
+        goto cleanup;
+    }
+    dwret = NtQueryInformationFile(handle, &iosb, &old_attrib, sizeof(old_attrib), FileBasicInformation);
+    ok(dwret == STATUS_SUCCESS, "Failed to get symlink folder's attributes (0x%x).\n", dwret);
+    path_len = strlen(name);
+    buffer_len = offsetof(REPARSE_DATA_BUFFER, LinuxSymbolicLinkReparseBuffer.PathBuffer[path_len]);
+    buffer = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, buffer_len);
+    buffer->ReparseTag = IO_REPARSE_TAG_LX_SYMLINK;
+    buffer->ReparseDataLength = sizeof(ULONG) + path_len;
+    memcpy(buffer->LinuxSymbolicLinkReparseBuffer.PathBuffer, name, path_len);
+    bret = DeviceIoControl(handle, FSCTL_SET_REPARSE_POINT, (LPVOID)buffer, buffer_len, NULL, 0, &dwret, 0);
+    ok(bret, "Failed to create symlink! (0x%x)\n", GetLastError());
+
+    /* Read back the Unix/Linux symlink */
+    HeapFree(GetProcessHeap(), 0, buffer);
+    handle = CreateFileW(reparse_path, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING,
+                         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, 0);
+    if (handle == INVALID_HANDLE_VALUE)
+    buffer_len = sizeof(*buffer) + MAX_PATH*sizeof(WCHAR);
+    buffer = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, buffer_len);
+    bret = DeviceIoControl(handle, FSCTL_GET_REPARSE_POINT, NULL, 0, (LPVOID)buffer, buffer_len, &dwret, 0);
+    ok(bret, "Failed to read symlink!\n");
+    string_len = buffer->ReparseDataLength - sizeof(ULONG);
+    unix_dest = &buffer->LinuxSymbolicLinkReparseBuffer.PathBuffer[0];
+    ok((memcmp(unix_dest, name, string_len) == 0), "Symlink destination does not match ('%s' != '%s')!\n",
+                                                   unix_dest, name);
+    total_len = FIELD_OFFSET(typeof(*buffer), LinuxSymbolicLinkReparseBuffer.PathBuffer[path_len])
+                - FIELD_OFFSET(typeof(*buffer), GenericReparseBuffer);
+    ok(buffer->ReparseDataLength == total_len, "ReparseDataLength has unexpected value (%d != %d)\n",
+                                               buffer->ReparseDataLength, total_len);
     CloseHandle(handle);
 
 cleanup:
