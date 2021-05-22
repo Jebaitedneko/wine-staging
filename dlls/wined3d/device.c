@@ -2159,7 +2159,7 @@ out:
     wined3d_device_context_unlock(context);
 }
 
-static void wined3d_device_context_set_depth_bounds(struct wined3d_device_context *context,
+void CDECL wined3d_device_context_set_depth_bounds(struct wined3d_device_context *context,
         BOOL enable, float min, float max)
 {
     TRACE("context %p, enable %d, min %.8e, max %.8e.\n", context, enable, min, max);

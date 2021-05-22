@@ -2514,6 +2514,8 @@ void __cdecl wined3d_device_context_set_blend_state(struct wined3d_device_contex
 void __cdecl wined3d_device_context_set_constant_buffers(struct wined3d_device_context *context,
         enum wined3d_shader_type type, unsigned int start_idx, unsigned int count,
         const struct wined3d_constant_buffer_state *buffers);
+void __cdecl wined3d_device_context_set_depth_bounds(struct wined3d_device_context *context,
+        BOOL enable, float min, float max);
 void __cdecl wined3d_device_context_set_depth_stencil_state(struct wined3d_device_context *context,
         struct wined3d_depth_stencil_state *depth_stencil_state, unsigned int stencil_ref);
 HRESULT __cdecl wined3d_device_context_set_depth_stencil_view(struct wined3d_device_context *context,

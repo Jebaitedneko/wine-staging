@@ -27,8 +27,10 @@
 #include "wine/list.h"
 #include "nvapi.h"
 #include "d3d9.h"
+#include "initguid.h"
 
 #include "wine/wined3d.h"
+#include "wine/winedxgi.h"
 
 WINE_DEFAULT_DEBUG_CHANNEL(nvapi);
 
@@ -680,6 +682,32 @@ static NvAPI_Status CDECL NvAPI_GPU_GetGpuCoreCount(NvPhysicalGpuHandle hPhysica
     return NVAPI_OK;
 }
 
+static NvAPI_Status CDECL NvAPI_D3D11_SetDepthBoundsTest(IUnknown *unk, NvU32 enable, float min, float max)
+{
+    struct wined3d_device_context *wined3d_context;
+    IWineD3DDeviceContext *context;
+    HRESULT hr;
+
+    TRACE("unk %p, enable %u, min %.8e, max %.8e.\n", unk, enable, min, max);
+
+    if (!unk)
+        return NVAPI_INVALID_ARGUMENT;
+
+    if (FAILED(hr = IUnknown_QueryInterface(unk, &IID_IWineD3DDeviceContext, (void **)&context)))
+    {
+        ERR("Failed to retrieve IWineD3DDeviceContext interface, hr %#x.\n", hr);
+        return NVAPI_ERROR;
+    }
+    wined3d_context = IWineD3DDeviceContext_get_wined3d_device_context(context);
+
+    wined3d_mutex_lock();
+    wined3d_device_context_set_depth_bounds(wined3d_context, enable, min, max);
+    wined3d_mutex_unlock();
+
+    IWineD3DDeviceContext_Release(context);
+    return NVAPI_OK;
+}
+
 void* CDECL nvapi_QueryInterface(unsigned int offset)
 {
     static const struct
@@ -725,6 +753,7 @@ void* CDECL nvapi_QueryInterface(unsigned int offset)
         {0x46fbeb03, NvAPI_GPU_GetPhysicalFrameBufferSize},
         {0x5a04b644, NvAPI_GPU_GetVirtualFrameBufferSize},
         {0xc7026a87, NvAPI_GPU_GetGpuCoreCount},
+        {0x7aaf7a04, NvAPI_D3D11_SetDepthBoundsTest},
     };
     unsigned int i;
     TRACE("(%x)\n", offset);
