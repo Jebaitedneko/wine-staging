@@ -1858,7 +1858,10 @@ void dispatch_compute(struct wined3d_device *device, const struct wined3d_state 
 #define STATE_STENCIL_REF (STATE_DEPTH_STENCIL + 1)
 #define STATE_IS_STENCIL_REF(a) ((a) == STATE_STENCIL_REF)
 
-#define STATE_COMPUTE_OFFSET (STATE_STENCIL_REF + 1)
+#define STATE_DEPTH_BOUNDS (STATE_STENCIL_REF + 1)
+#define STATE_IS_DEPTH_BOUNDS(a) ((a) == STATE_DEPTH_BOUNDS)
+
+#define STATE_COMPUTE_OFFSET (STATE_DEPTH_BOUNDS + 1)
 
 #define STATE_COMPUTE_SHADER (STATE_COMPUTE_OFFSET)
 #define STATE_IS_COMPUTE_SHADER(a) ((a) == STATE_COMPUTE_SHADER)
@@ -3729,6 +3732,13 @@ struct wined3d_light_state
     const struct wined3d_light_info *lights[WINED3D_MAX_ACTIVE_LIGHTS];
 };
 
+struct wined3d_depth_bounds_state
+{
+    BOOL enable;
+    float min;
+    float max;
+};
+
 #define WINED3D_STATE_NO_REF        0x00000001
 #define WINED3D_STATE_INIT_DEFAULT  0x00000002
 
@@ -3783,8 +3793,11 @@ struct wined3d_state
     struct wined3d_blend_state *blend_state;
     struct wined3d_color blend_factor;
     unsigned int sample_mask;
+
     struct wined3d_depth_stencil_state *depth_stencil_state;
     unsigned int stencil_ref;
+    struct wined3d_depth_bounds_state depth_bounds;
+
     struct wined3d_rasterizer_state *rasterizer_state;
 };
 
@@ -5025,6 +5038,8 @@ void wined3d_device_context_emit_set_clip_plane(struct wined3d_device_context *c
 void wined3d_device_context_emit_set_constant_buffers(struct wined3d_device_context *context,
         enum wined3d_shader_type type, unsigned int start_idx, unsigned int count,
         const struct wined3d_constant_buffer_state *buffers) DECLSPEC_HIDDEN;
+void wined3d_device_context_emit_set_depth_bounds(struct wined3d_device_context *context,
+        BOOL enable, float min, float max) DECLSPEC_HIDDEN;
 void wined3d_device_context_emit_set_depth_stencil_state(struct wined3d_device_context *context,
         struct wined3d_depth_stencil_state *state, unsigned int stencil_ref) DECLSPEC_HIDDEN;
 void wined3d_device_context_emit_set_depth_stencil_view(struct wined3d_device_context *context,

@@ -2159,6 +2159,14 @@ out:
     wined3d_device_context_unlock(context);
 }
 
+static void wined3d_device_context_set_depth_bounds(struct wined3d_device_context *context,
+        BOOL enable, float min, float max)
+{
+    TRACE("context %p, enable %d, min %.8e, max %.8e.\n", context, enable, min, max);
+
+    wined3d_device_context_emit_set_depth_bounds(context, enable, min, max);
+}
+
 void CDECL wined3d_device_context_set_viewports(struct wined3d_device_context *context, unsigned int viewport_count,
         const struct wined3d_viewport *viewports)
 {
@@ -3879,7 +3887,8 @@ static void wined3d_device_set_texture(struct wined3d_device *device,
 void CDECL wined3d_device_apply_stateblock(struct wined3d_device *device,
         struct wined3d_stateblock *stateblock)
 {
-    BOOL set_blend_state = FALSE, set_depth_stencil_state = FALSE, set_rasterizer_state = FALSE;
+    bool set_blend_state = false, set_depth_stencil_state = false, set_rasterizer_state = false,
+            set_depth_bounds = false;
     const struct wined3d_stateblock_state *state = &stateblock->stateblock_state;
     const struct wined3d_saved_states *changed = &stateblock->changed;
     const unsigned int word_bit_count = sizeof(DWORD) * CHAR_BIT;
@@ -3985,7 +3994,7 @@ void CDECL wined3d_device_apply_stateblock(struct wined3d_device *device,
                 case WINED3D_RS_COLORWRITEENABLE1:
                 case WINED3D_RS_COLORWRITEENABLE2:
                 case WINED3D_RS_COLORWRITEENABLE3:
-                    set_blend_state = TRUE;
+                    set_blend_state = true;
                     break;
 
                 case WINED3D_RS_BACK_STENCILFAIL:
@@ -4004,7 +4013,7 @@ void CDECL wined3d_device_apply_stateblock(struct wined3d_device *device,
                 case WINED3D_RS_ZENABLE:
                 case WINED3D_RS_ZFUNC:
                 case WINED3D_RS_ZWRITEENABLE:
-                    set_depth_stencil_state = TRUE;
+                    set_depth_stencil_state = true;
                     break;
 
                 case WINED3D_RS_FILLMODE:
@@ -4013,8 +4022,14 @@ void CDECL wined3d_device_apply_stateblock(struct wined3d_device *device,
                 case WINED3D_RS_DEPTHBIAS:
                 case WINED3D_RS_SCISSORTESTENABLE:
                 case WINED3D_RS_ANTIALIASEDLINEENABLE:
-                    set_rasterizer_state = TRUE;
+                    set_rasterizer_state = true;
                     break;
+
+                case WINED3D_RS_ADAPTIVETESS_X:
+                case WINED3D_RS_ADAPTIVETESS_Z:
+                case WINED3D_RS_ADAPTIVETESS_W:
+                    set_depth_bounds = true;
+                    /* fall through */
 
                 default:
                     wined3d_device_set_render_state(device, idx, state->rs[idx]);
@@ -4202,6 +4217,20 @@ void CDECL wined3d_device_apply_stateblock(struct wined3d_device *device,
                 wined3d_depth_stencil_state_decref(depth_stencil_state);
             }
         }
+    }
+
+    if (set_depth_bounds)
+    {
+        union
+        {
+            DWORD d;
+            float f;
+        } zmin, zmax;
+
+        zmin.d = state->rs[WINED3D_RS_ADAPTIVETESS_Z];
+        zmax.d = state->rs[WINED3D_RS_ADAPTIVETESS_W];
+        wined3d_device_context_set_depth_bounds(context,
+                state->rs[WINED3D_RS_ADAPTIVETESS_X] == WINED3DFMT_NVDB, zmin.f, zmax.f);
     }
 
     for (i = 0; i < ARRAY_SIZE(changed->textureState); ++i)
