@@ -796,6 +796,7 @@ SOURCES = \
 	windows.media.idl \
 	windows.media.speechrecognition.idl \
 	windows.media.speechsynthesis.idl \
+	windows.networking.connectivity.idl \
 	windows.storage.streams.idl \
 	windows.system.idl \
 	windows.system.power.idl \
