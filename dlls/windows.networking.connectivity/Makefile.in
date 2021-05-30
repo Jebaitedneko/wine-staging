@@ -5,3 +5,6 @@ EXTRADLLFLAGS = -mno-cygwin
 
 C_SRCS = \
 	windows.networking.connectivity_main.c
+
+RC_SRCS = rsrc.rc
+
