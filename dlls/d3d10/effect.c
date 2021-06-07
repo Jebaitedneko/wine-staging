@@ -151,7 +151,7 @@ static inline struct d3d10_effect_variable *impl_from_ID3D10EffectVariable(ID3D1
 
 static inline struct d3d10_effect_variable *impl_from_ID3D10EffectShaderVariable(ID3D10EffectShaderVariable *iface)
 {
-    return CONTAINING_RECORD(iface, struct d3d10_effect_variable, ID3D10EffectVariable_iface);
+    return CONTAINING_RECORD((ID3D10EffectVariable*)iface, struct d3d10_effect_variable, ID3D10EffectVariable_iface);
 }
 
 static struct d3d10_effect_variable * d3d10_array_get_element(struct d3d10_effect_variable *v,
@@ -5873,7 +5873,7 @@ static void read_variable_array_from_buffer(struct d3d10_effect_variable *variab
 
 static inline struct d3d10_effect_variable *impl_from_ID3D10EffectScalarVariable(ID3D10EffectScalarVariable *iface)
 {
-    return CONTAINING_RECORD(iface, struct d3d10_effect_variable, ID3D10EffectVariable_iface);
+    return CONTAINING_RECORD((ID3D10EffectVariable*)iface, struct d3d10_effect_variable, ID3D10EffectVariable_iface);
 }
 
 static BOOL STDMETHODCALLTYPE d3d10_effect_scalar_variable_IsValid(ID3D10EffectScalarVariable *iface)
@@ -6211,7 +6211,7 @@ static const struct ID3D10EffectScalarVariableVtbl d3d10_effect_scalar_variable_
 
 static inline struct d3d10_effect_variable *impl_from_ID3D10EffectVectorVariable(ID3D10EffectVectorVariable *iface)
 {
-    return CONTAINING_RECORD(iface, struct d3d10_effect_variable, ID3D10EffectVariable_iface);
+    return CONTAINING_RECORD((ID3D10EffectVariable*)iface, struct d3d10_effect_variable, ID3D10EffectVariable_iface);
 }
 
 static BOOL STDMETHODCALLTYPE d3d10_effect_vector_variable_IsValid(ID3D10EffectVectorVariable *iface)
@@ -6700,7 +6700,7 @@ static void read_matrix_variable_array_from_buffer(struct d3d10_effect_variable 
 
 static inline struct d3d10_effect_variable *impl_from_ID3D10EffectMatrixVariable(ID3D10EffectMatrixVariable *iface)
 {
-    return CONTAINING_RECORD(iface, struct d3d10_effect_variable, ID3D10EffectVariable_iface);
+    return CONTAINING_RECORD((ID3D10EffectVariable*)iface, struct d3d10_effect_variable, ID3D10EffectVariable_iface);
 }
 
 static BOOL STDMETHODCALLTYPE d3d10_effect_matrix_variable_IsValid(ID3D10EffectMatrixVariable *iface)
@@ -7227,7 +7227,7 @@ static void set_shader_resource_variable(ID3D10ShaderResourceView **src, ID3D10S
 static inline struct d3d10_effect_variable *impl_from_ID3D10EffectShaderResourceVariable(
         ID3D10EffectShaderResourceVariable *iface)
 {
-    return CONTAINING_RECORD(iface, struct d3d10_effect_variable, ID3D10EffectVariable_iface);
+    return CONTAINING_RECORD((ID3D10EffectVariable*)iface, struct d3d10_effect_variable, ID3D10EffectVariable_iface);
 }
 
 static BOOL STDMETHODCALLTYPE d3d10_effect_shader_resource_variable_IsValid(ID3D10EffectShaderResourceVariable *iface)
