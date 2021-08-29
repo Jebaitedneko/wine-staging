@@ -1,5 +1,6 @@
 MODULE    = fltmgr.sys
 EXTRADLLFLAGS = -Wl,--subsystem,native
+IMPORTS = ntoskrnl
 
 C_SRCS = \
 	main.c
