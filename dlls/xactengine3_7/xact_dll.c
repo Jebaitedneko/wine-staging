@@ -857,40 +857,43 @@ static void FACTCALL fact_notification_cb(const FACTNotification *notification)
     note.type = notification->type;
     note.pvContext = engine->contexts[notification->type - 1];
 
-    switch (notification->type)
+    if (notification->type == XACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED)
     {
-        case XACTNOTIFICATIONTYPE_SOUNDBANKDESTROYED:
-            note.soundBank.pSoundBank = FACTSoundBank_GetPrivateContext(notification->wave.pSoundBank);
-            break;
+        note.soundBank.pSoundBank = FACTSoundBank_GetPrivateContext(notification->wave.pSoundBank);
+    }
+    else if (notification->type == XACTNOTIFICATIONTYPE_WAVESTOP
 #if XACT3_VER >= 0x0205
-        case XACTNOTIFICATIONTYPE_WAVEDESTROYED:
-        case XACTNOTIFICATIONTYPE_WAVELOOPED:
-        case XACTNOTIFICATIONTYPE_WAVEPLAY:
-        case XACTNOTIFICATIONTYPE_WAVEPREPARED:
+             || notification->type == XACTNOTIFICATIONTYPE_WAVEDESTROYED
+             || notification->type == XACTNOTIFICATIONTYPE_WAVELOOPED
+             || notification->type == XACTNOTIFICATIONTYPE_WAVEPLAY
+             || notification->type == XACTNOTIFICATIONTYPE_WAVEPREPARED)
+#else
+             )
 #endif
-        case XACTNOTIFICATIONTYPE_WAVESTOP:
-            note.wave.cueIndex = notification->wave.cueIndex;
-            note.wave.pCue = FACTCue_GetPrivateContext(notification->wave.pCue);
-            note.wave.pSoundBank = FACTSoundBank_GetPrivateContext(notification->wave.pSoundBank);
+    {
+        note.wave.cueIndex = notification->wave.cueIndex;
+        note.wave.pCue = FACTCue_GetPrivateContext(notification->wave.pCue);
+        note.wave.pSoundBank = FACTSoundBank_GetPrivateContext(notification->wave.pSoundBank);
 #if XACT3_VER >= 0x0205
-            note.wave.pWave = FACTWave_GetPrivateContext(notification->wave.pWave);
+        note.wave.pWave = FACTWave_GetPrivateContext(notification->wave.pWave);
 #endif
-            note.wave.pWaveBank = FACTWaveBank_GetPrivateContext(notification->wave.pWaveBank);
-            break;
-
-        case XACTNOTIFICATIONTYPE_CUEPLAY:
-        case XACTNOTIFICATIONTYPE_CUEPREPARED:
-        case XACTNOTIFICATIONTYPE_CUESTOP:
+        note.wave.pWaveBank = FACTWaveBank_GetPrivateContext(notification->wave.pWaveBank);
+    }
+    else if (notification->type == XACTNOTIFICATIONTYPE_CUEPLAY ||
+             notification->type == XACTNOTIFICATIONTYPE_CUEPREPARED ||
+             notification->type == XACTNOTIFICATIONTYPE_CUESTOP ||
+             notification->type == XACTNOTIFICATIONTYPE_CUEDESTROYED)
+    {
+        if (notification->type != XACTNOTIFICATIONTYPE_CUEDESTROYED)
             note.cue.pCue = FACTCue_GetPrivateContext(notification->cue.pCue);
-            /* Fall through */
-        case XACTNOTIFICATIONTYPE_CUEDESTROYED:
-            note.cue.cueIndex = notification->cue.cueIndex;
-            note.cue.pSoundBank = FACTSoundBank_GetPrivateContext(notification->cue.pSoundBank);
-            break;
-        default:
-            FIXME("Unsupported callback type %d\n", notification->type);
-            return;
-     }
+        note.cue.cueIndex = notification->cue.cueIndex;
+        note.cue.pSoundBank = FACTSoundBank_GetPrivateContext(notification->cue.pSoundBank);
+    }
+    else
+    {
+        FIXME("Unsupported callback type %d\n", notification->type);
+        return;
+    }
 
     engine->notification_callback(&note);
 }
