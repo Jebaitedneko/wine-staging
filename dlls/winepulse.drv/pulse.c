@@ -102,8 +102,8 @@ static REFERENCE_TIME pulse_min_period[2], pulse_def_period[2];
 static struct list g_phys_speakers = LIST_INIT(g_phys_speakers);
 static struct list g_phys_sources = LIST_INIT(g_phys_sources);
 
-static const REFERENCE_TIME MinimumPeriod = 30000;
-static const REFERENCE_TIME DefaultPeriod = 100000;
+static REFERENCE_TIME MinimumPeriod = 30000;
+static REFERENCE_TIME DefaultPeriod = 100000;
 
 static pthread_mutex_t pulse_mutex;
 static pthread_cond_t pulse_cond = PTHREAD_COND_INITIALIZER;
@@ -596,15 +596,24 @@ static void pulse_probe_settings(pa_mainloop *ml, pa_context *ctx, int render, W
     int ret;
     unsigned int length = 0;
 
+    const char *env_usecs = getenv("STAGING_AUDIO_USECS");
+    const char *env_minp = getenv("STAGING_AUDIO_MINP");
+    const char *env_defp = getenv("STAGING_AUDIO_DEFP");
+
     pa_channel_map_init_auto(&map, 2, PA_CHANNEL_MAP_ALSA);
     ss.rate = 48000;
     ss.format = PA_SAMPLE_FLOAT32LE;
     ss.channels = map.channels;
 
     attr.maxlength = -1;
-    attr.tlength = -1;
-    attr.minreq = attr.fragsize = pa_frame_size(&ss);
-    attr.prebuf = 0;
+    attr.tlength = attr.fragsize = pa_usec_to_bytes(1000, &ss);
+    if(env_usecs) {
+        int val = atoi(env_usecs);
+        attr.tlength = attr.fragsize = pa_usec_to_bytes(val, &ss);
+        printf("%s:%d :: Using %d usecs for attr.tlength and attr.fragsize (STAGING_AUDIO_USECS).\n", __func__, __LINE__, val);
+    }
+    attr.minreq = -1;
+    attr.prebuf = -1;
 
     stream = pa_stream_new(ctx, "format test stream", &ss, &map);
     if (stream)
@@ -613,9 +622,9 @@ static void pulse_probe_settings(pa_mainloop *ml, pa_context *ctx, int render, W
         ret = -1;
     else if (render)
         ret = pa_stream_connect_playback(stream, NULL, &attr,
-        PA_STREAM_START_CORKED|PA_STREAM_FIX_RATE|PA_STREAM_FIX_CHANNELS|PA_STREAM_EARLY_REQUESTS, NULL, NULL);
+        PA_STREAM_START_CORKED|PA_STREAM_FIX_RATE|PA_STREAM_FIX_CHANNELS|PA_STREAM_EARLY_REQUESTS|PA_STREAM_ADJUST_LATENCY, NULL, NULL);
     else
-        ret = pa_stream_connect_record(stream, NULL, &attr, PA_STREAM_START_CORKED|PA_STREAM_FIX_RATE|PA_STREAM_FIX_CHANNELS|PA_STREAM_EARLY_REQUESTS);
+        ret = pa_stream_connect_record(stream, NULL, &attr, PA_STREAM_START_CORKED|PA_STREAM_FIX_RATE|PA_STREAM_FIX_CHANNELS|PA_STREAM_EARLY_REQUESTS|PA_STREAM_ADJUST_LATENCY);
     if (ret >= 0) {
         while (pa_mainloop_iterate(ml, 1, &ret) >= 0 &&
                 pa_stream_get_state(stream) == PA_STREAM_CREATING)
@@ -645,6 +654,20 @@ static void pulse_probe_settings(pa_mainloop *ml, pa_context *ctx, int render, W
 
     if (pulse_def_period[!render] < DefaultPeriod)
         pulse_def_period[!render] = DefaultPeriod;
+
+    if(env_minp) {
+        int val = atoi(env_minp);
+        MinimumPeriod = val;
+        pulse_min_period[0] = pulse_min_period[1] = MinimumPeriod;
+        printf("%s:%d :: Set MinimumPeriod and pulse_min_period to %d (STAGING_AUDIO_MINP).\n", __func__, __LINE__, val);
+    }
+
+    if(env_defp) {
+        int val = atoi(env_defp);
+        DefaultPeriod = val;
+        pulse_def_period[0] = pulse_def_period[1] = DefaultPeriod;
+        printf("%s:%d :: Set DefaultPeriod and pulse_def_period to %d (STAGING_AUDIO_DEFP).\n", __func__, __LINE__, val);
+    }
 
     wfx->wFormatTag = WAVE_FORMAT_EXTENSIBLE;
     wfx->cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
@@ -982,6 +1005,9 @@ static NTSTATUS pulse_create_stream(void *args)
     unsigned int i, bufsize_bytes;
     HRESULT hr;
 
+    const char *env_duration = getenv("STAGING_AUDIO_DURATION");
+    const char *env_period = getenv("STAGING_AUDIO_PERIOD");
+
     pulse_lock();
 
     if (FAILED(params->result = pulse_connect(params->name)))
@@ -1010,6 +1036,17 @@ static NTSTATUS pulse_create_stream(void *args)
     period = pulse_def_period[stream->dataflow == eCapture];
     if (duration < 3 * period)
         duration = 3 * period;
+
+    if(env_duration) {
+        int val = atoi(env_duration);
+        duration = val;
+        printf("%s:%d :: Set duration to %d (STAGING_AUDIO_DURATION).\n", __func__, __LINE__, val);
+    }
+    if(env_period) {
+        int val = atoi(env_period);
+        period = val;
+        printf("%s:%d :: Set period to %d (STAGING_AUDIO_PERIOD).\n", __func__, __LINE__, val);
+    }
 
     stream->period_bytes = pa_frame_size(&stream->ss) * muldiv(period, stream->ss.rate, 10000000);
 
@@ -1954,6 +1991,8 @@ static NTSTATUS pulse_get_latency(void *args)
     const pa_buffer_attr *attr;
     REFERENCE_TIME lat;
 
+    const char *env_latency = getenv("STAGING_AUDIO_LATENCY");
+
     pulse_lock();
     if (!pulse_stream_valid(stream)) {
         pulse_unlock();
@@ -1965,6 +2004,13 @@ static NTSTATUS pulse_get_latency(void *args)
         lat = attr->minreq / pa_frame_size(&stream->ss);
     else
         lat = attr->fragsize / pa_frame_size(&stream->ss);
+
+    if(env_latency) {
+        int val = atoi(env_latency);
+        *params->latency = val;
+        printf("%s:%d :: Set *latency to %d (STAGING_AUDIO_LATENCY).\n", __func__, __LINE__, val);
+    }
+
     *params->latency = (lat * 10000000) / stream->ss.rate + pulse_def_period[0];
     pulse_unlock();
     TRACE("Latency: %u ms\n", (DWORD)(*params->latency / 10000));
