@@ -913,7 +913,6 @@ with_unwind
 with_usb
 with_v4l2
 with_vulkan
-with_xattr
 with_xcomposite
 with_xcursor
 with_xfixes
@@ -1092,15 +1091,11 @@ enable_dwrite
 enable_dx8vb
 enable_dxdiagn
 enable_dxgi
-enable_dxgkrnl_sys
-enable_dxgmms1_sys
 enable_dxtrans
 enable_dxva2
 enable_esent
 enable_evr
 enable_explorerframe
-enable_ext_ms_win_appmodel_usercontext_l1_1_0
-enable_ext_ms_win_xaml_pal_l1_1_0
 enable_faultrep
 enable_feclient
 enable_fltlib
@@ -1129,7 +1124,6 @@ enable_iccvid
 enable_icmp
 enable_ieframe
 enable_ieproxy
-enable_iertutil
 enable_imaadp32_acm
 enable_imagehlp
 enable_imm32
@@ -1279,9 +1273,6 @@ enable_ntdll
 enable_ntdsapi
 enable_ntoskrnl_exe
 enable_ntprint
-enable_win32
-enable_nvcuda
-enable_nvcuvid
 enable_objsel
 enable_odbc32
 enable_odbcbcp
@@ -1420,14 +1411,12 @@ enable_wevtapi
 enable_wevtsvc
 enable_wiaservc
 enable_wimgapi
-enable_win32k_sys
 enable_win32u
 enable_windows_devices_enumeration
 enable_windows_gaming_input
 enable_windows_globalization
 enable_windows_media_devices
 enable_windows_media_speech
-enable_windows_networking_connectivity
 enable_windowscodecs
 enable_windowscodecsext
 enable_winealsa_drv
@@ -2422,7 +2411,6 @@ Optional Packages:
   --without-usb           do not use the libusb library
   --without-v4l2          do not use v4l2 (video capture)
   --without-vulkan        do not use Vulkan
-  --without-xattr         do not use xattr (security attributes support)
   --without-xcomposite    do not use the Xcomposite extension
   --without-xcursor       do not use the Xcursor extension
   --without-xfixes        do not use Xfixes for clipboard change notifications
@@ -4375,13 +4363,6 @@ fi
 if test ${with_vulkan+y}
 then :
   withval=$with_vulkan;
-fi
-
-
-# Check whether --with-xattr was given.
-if test ${with_xattr+y}
-then :
-  withval=$with_xattr;
 fi
 
 
@@ -6379,12 +6360,6 @@ enable_win16=${enable_win16:-no}
 enable_win64=${enable_win64:-no}
 enable_wow64=${enable_wow64:-no}
 enable_wow64win=${enable_wow64win:-no}
-if test "x$enable_win64" != "xyes"
-then
-  enable_win32="yes"
-else
-  enable_win32="no"
-fi
 enable_wow64cpu=${enable_wow64cpu:-no}
 
 enable_winetest=${enable_winetest:-$enable_tests}
@@ -8019,12 +7994,6 @@ then :
   printf "%s\n" "#define HAVE_LINUX_PARAM_H 1" >>confdefs.h
 
 fi
-ac_fn_c_check_header_compile "$LINENO" "linux/seccomp.h" "ac_cv_header_linux_seccomp_h" "$ac_includes_default"
-if test "x$ac_cv_header_linux_seccomp_h" = xyes
-then :
-  printf "%s\n" "#define HAVE_LINUX_SECCOMP_H 1" >>confdefs.h
-
-fi
 ac_fn_c_check_header_compile "$LINENO" "linux/serial.h" "ac_cv_header_linux_serial_h" "$ac_includes_default"
 if test "x$ac_cv_header_linux_serial_h" = xyes
 then :
@@ -8197,12 +8166,6 @@ ac_fn_c_check_header_compile "$LINENO" "sys/event.h" "ac_cv_header_sys_event_h" 
 if test "x$ac_cv_header_sys_event_h" = xyes
 then :
   printf "%s\n" "#define HAVE_SYS_EVENT_H 1" >>confdefs.h
-
-fi
-ac_fn_c_check_header_compile "$LINENO" "sys/eventfd.h" "ac_cv_header_sys_eventfd_h" "$ac_includes_default"
-if test "x$ac_cv_header_sys_eventfd_h" = xyes
-then :
-  printf "%s\n" "#define HAVE_SYS_EVENTFD_H 1" >>confdefs.h
 
 fi
 ac_fn_c_check_header_compile "$LINENO" "sys/filio.h" "ac_cv_header_sys_filio_h" "$ac_includes_default"
@@ -9077,65 +9040,6 @@ then :
 
 fi
 
-
-if test "x$with_xattr" != "xno"
-then
-           for ac_header in attr/xattr.h sys/extattr.h
-do :
-  as_ac_Header=`printf "%s\n" "ac_cv_header_$ac_header" | $as_tr_sh`
-ac_fn_c_check_header_compile "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
-if eval test \"x\$"$as_ac_Header"\" = x"yes"
-then :
-  cat >>confdefs.h <<_ACEOF
-#define `printf "%s\n" "HAVE_$ac_header" | $as_tr_cpp` 1
-_ACEOF
- HAVE_XATTR=1
-fi
-
-done
-           for ac_header in sys/xattr.h
-do :
-  ac_fn_c_check_header_compile "$LINENO" "sys/xattr.h" "ac_cv_header_sys_xattr_h" "$ac_includes_default"
-if test "x$ac_cv_header_sys_xattr_h" = xyes
-then :
-  printf "%s\n" "#define HAVE_SYS_XATTR_H 1" >>confdefs.h
- HAVE_XATTR=1
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <sys/xattr.h>
-int
-main (void)
-{
-getxattr("", "", "", 0, 0, 0);
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-
-printf "%s\n" "#define XATTR_ADDITIONAL_OPTIONS 1" >>confdefs.h
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-done
-fi
-if test "x$with_xattr" = "xyes"
-then
-    if test "x$HAVE_XATTR" = "x"
-then :
-  case "x$with_xattr" in
-  xno) ;;
-  *)   as_fn_error $? "xattr ${notice_platform}development files \
-not found. Wine will be built without extended attribute support, which probably isn't what you \
-want. You will need to install ${notice_platform}development packages of libattr at the very least.
-Use the --without-xattr option if you really want this." "$LINENO" 5 ;;
-esac
-
-fi
-fi
 
 
 DLLFLAGS=""
@@ -19697,12 +19601,6 @@ then :
   printf "%s\n" "#define HAVE_POSIX_FALLOCATE 1" >>confdefs.h
 
 fi
-ac_fn_c_check_func "$LINENO" "ppoll" "ac_cv_func_ppoll"
-if test "x$ac_cv_func_ppoll" = xyes
-then :
-  printf "%s\n" "#define HAVE_PPOLL 1" >>confdefs.h
-
-fi
 ac_fn_c_check_func "$LINENO" "prctl" "ac_cv_func_prctl"
 if test "x$ac_cv_func_prctl" = xyes
 then :
@@ -19719,18 +19617,6 @@ ac_fn_c_check_func "$LINENO" "sched_yield" "ac_cv_func_sched_yield"
 if test "x$ac_cv_func_sched_yield" = xyes
 then :
   printf "%s\n" "#define HAVE_SCHED_YIELD 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "renameat" "ac_cv_func_renameat"
-if test "x$ac_cv_func_renameat" = xyes
-then :
-  printf "%s\n" "#define HAVE_RENAMEAT 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "renameat2" "ac_cv_func_renameat2"
-if test "x$ac_cv_func_renameat2" = xyes
-then :
-  printf "%s\n" "#define HAVE_RENAMEAT2 1" >>confdefs.h
 
 fi
 ac_fn_c_check_func "$LINENO" "setproctitle" "ac_cv_func_setproctitle"
@@ -19767,12 +19653,6 @@ ac_fn_c_check_func "$LINENO" "thr_kill2" "ac_cv_func_thr_kill2"
 if test "x$ac_cv_func_thr_kill2" = xyes
 then :
   printf "%s\n" "#define HAVE_THR_KILL2 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "utimensat" "ac_cv_func_utimensat"
-if test "x$ac_cv_func_utimensat" = xyes
-then :
-  printf "%s\n" "#define HAVE_UTIMENSAT 1" >>confdefs.h
 
 fi
 
@@ -20105,72 +19985,6 @@ fi
     LIBS=$ac_save_LIBS
     ;;
 esac
-
-ac_save_LIBS=$LIBS
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing shm_open" >&5
-printf %s "checking for library containing shm_open... " >&6; }
-if test ${ac_cv_search_shm_open+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-char shm_open ();
-int
-main (void)
-{
-return shm_open ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' rt
-do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_search_shm_open=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext
-  if test ${ac_cv_search_shm_open+y}
-then :
-  break
-fi
-done
-if test ${ac_cv_search_shm_open+y}
-then :
-
-else $as_nop
-  ac_cv_search_shm_open=no
-fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_shm_open" >&5
-printf "%s\n" "$ac_cv_search_shm_open" >&6; }
-ac_res=$ac_cv_search_shm_open
-if test "$ac_res" != no
-then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-
-printf "%s\n" "#define HAVE_SHM_OPEN 1" >>confdefs.h
-
-                test "$ac_res" = "none required" || RT_LIBS="$ac_res"
-
-fi
-
-LIBS=$ac_save_LIBS
 
 if test "x$with_ldap" != "xno"
 then
@@ -21512,8 +21326,6 @@ wine_fn_config_makefile dlls/dxdiagn enable_dxdiagn
 wine_fn_config_makefile dlls/dxdiagn/tests enable_tests
 wine_fn_config_makefile dlls/dxgi enable_dxgi
 wine_fn_config_makefile dlls/dxgi/tests enable_tests
-wine_fn_config_makefile dlls/dxgkrnl.sys enable_dxgkrnl_sys
-wine_fn_config_makefile dlls/dxgmms1.sys enable_dxgmms1_sys
 wine_fn_config_makefile dlls/dxtrans enable_dxtrans
 wine_fn_config_makefile dlls/dxva2 enable_dxva2
 wine_fn_config_makefile dlls/dxva2/tests enable_tests
@@ -21522,8 +21334,6 @@ wine_fn_config_makefile dlls/evr enable_evr
 wine_fn_config_makefile dlls/evr/tests enable_tests
 wine_fn_config_makefile dlls/explorerframe enable_explorerframe
 wine_fn_config_makefile dlls/explorerframe/tests enable_tests
-wine_fn_config_makefile dlls/ext-ms-win-appmodel-usercontext-l1-1-0 enable_ext_ms_win_appmodel_usercontext_l1_1_0
-wine_fn_config_makefile dlls/ext-ms-win-xaml-pal-l1-1-0 enable_ext_ms_win_xaml_pal_l1_1_0
 wine_fn_config_makefile dlls/faultrep enable_faultrep
 wine_fn_config_makefile dlls/faultrep/tests enable_tests
 wine_fn_config_makefile dlls/feclient enable_feclient
@@ -21563,7 +21373,6 @@ wine_fn_config_makefile dlls/icmp enable_icmp
 wine_fn_config_makefile dlls/ieframe enable_ieframe
 wine_fn_config_makefile dlls/ieframe/tests enable_tests
 wine_fn_config_makefile dlls/ieproxy enable_ieproxy
-wine_fn_config_makefile dlls/iertutil enable_iertutil
 wine_fn_config_makefile dlls/ifsmgr.vxd enable_win16
 wine_fn_config_makefile dlls/imaadp32.acm enable_imaadp32_acm
 wine_fn_config_makefile dlls/imagehlp enable_imagehlp
@@ -21792,14 +21601,6 @@ wine_fn_config_makefile dlls/ntoskrnl.exe enable_ntoskrnl_exe
 wine_fn_config_makefile dlls/ntoskrnl.exe/tests enable_tests
 wine_fn_config_makefile dlls/ntprint enable_ntprint
 wine_fn_config_makefile dlls/ntprint/tests enable_tests
-wine_fn_config_makefile dlls/nvapi enable_win32
-wine_fn_config_makefile dlls/nvapi/tests enable_tests
-wine_fn_config_makefile dlls/nvapi64 enable_win64
-wine_fn_config_makefile dlls/nvcuda enable_nvcuda
-wine_fn_config_makefile dlls/nvcuda/tests enable_tests
-wine_fn_config_makefile dlls/nvcuvid enable_nvcuvid
-wine_fn_config_makefile dlls/nvencodeapi enable_win32
-wine_fn_config_makefile dlls/nvencodeapi64 enable_win64
 wine_fn_config_makefile dlls/objsel enable_objsel
 wine_fn_config_makefile dlls/odbc32 enable_odbc32
 wine_fn_config_makefile dlls/odbcbcp enable_odbcbcp
@@ -22034,7 +21835,6 @@ wine_fn_config_makefile dlls/wevtsvc enable_wevtsvc
 wine_fn_config_makefile dlls/wiaservc enable_wiaservc
 wine_fn_config_makefile dlls/wiaservc/tests enable_tests
 wine_fn_config_makefile dlls/wimgapi enable_wimgapi
-wine_fn_config_makefile dlls/win32k.sys enable_win32k_sys
 wine_fn_config_makefile dlls/win32s16.dll16 enable_win16
 wine_fn_config_makefile dlls/win32u enable_win32u
 wine_fn_config_makefile dlls/win32u/tests enable_tests
@@ -22050,7 +21850,6 @@ wine_fn_config_makefile dlls/windows.media.devices enable_windows_media_devices
 wine_fn_config_makefile dlls/windows.media.devices/tests enable_tests
 wine_fn_config_makefile dlls/windows.media.speech enable_windows_media_speech
 wine_fn_config_makefile dlls/windows.media.speech/tests enable_tests
-wine_fn_config_makefile dlls/windows.networking.connectivity enable_windows_networking_connectivity
 wine_fn_config_makefile dlls/windowscodecs enable_windowscodecs
 wine_fn_config_makefile dlls/windowscodecs/tests enable_tests
 wine_fn_config_makefile dlls/windowscodecsext enable_windowscodecsext
@@ -22447,7 +22246,7 @@ maintainer-clean::
 
 
 wine_fn_append_rule "dlls/ntdll/unix/version.c: dummy
-	@version=\`(GIT_DIR=${wine_srcdir}.git git describe HEAD 2>/dev/null || echo \"wine-\$(PACKAGE_VERSION)\") | sed -n -e '\$\$s/\(.*\)/const char wine_build[] = \"\\1 (Staging)\";/p'\` && (echo \$\$version | cmp -s - \$@) || echo \$\$version >\$@ || (rm -f \$@ && exit 1)
+	@version=\`(GIT_DIR=${wine_srcdir}.git git describe HEAD 2>/dev/null || echo \"wine-\$(PACKAGE_VERSION)\") | sed -n -e '\$\$s/\(.*\)/const char wine_build[] = \"\\1\";/p'\` && (echo \$\$version | cmp -s - \$@) || echo \$\$version >\$@ || (rm -f \$@ && exit 1)
 programs/winetest/build.rc: dummy
 	@build=\"STRINGTABLE { 1 \\\"\`GIT_DIR=${wine_srcdir}.git git rev-parse HEAD 2>/dev/null\`\\\" }\" && (echo \$\$build | cmp -s - \$@) || echo \$\$build >\$@ || (rm -f \$@ && exit 1)
 programs/winetest/build.nfo:
